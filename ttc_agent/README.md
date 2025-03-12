@@ -11,4 +11,8 @@
 3. 运行以下命令来启动 `chat_app.py`：
 
 ```sh
+# 热加载：
 uvicorn ttc_agent.chat_app:app --reload
+
+# 正常启动
+python -m ttc_agent.chat_app
