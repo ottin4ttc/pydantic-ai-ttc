@@ -17,6 +17,7 @@ const ChatContainer = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const sentMessageRef = useRef<string | null>(null);
   const { toast } = useToast();
   
   // Fetch chat history on component mount
@@ -61,6 +62,8 @@ const ChatContainer = () => {
     
     // Add user message immediately for better UX
     setMessages(prev => [...prev, userMessage]);
+    // Store the timestamp to avoid duplication from API response
+    sentMessageRef.current = userMessage.timestamp;
     setInputValue('');
     setIsLoading(true);
     setError(null);
@@ -93,6 +96,11 @@ const ChatContainer = () => {
               const lastMessage = JSON.parse(lastLine) as ChatMessage;
               
               setMessages(prev => {
+                // Skip user messages that we already added locally
+                if (lastMessage.role === 'user' && lastMessage.timestamp === sentMessageRef.current) {
+                  return prev;
+                }
+                
                 // Check if we already have this message
                 const messageExists = prev.some(m => 
                   m.timestamp === lastMessage.timestamp && m.role === lastMessage.role
