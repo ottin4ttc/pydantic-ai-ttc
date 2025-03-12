@@ -24,6 +24,7 @@ import fastapi
 import logfire
 from fastapi import Depends, Request
 from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from typing_extensions import LiteralString, ParamSpec, TypedDict
@@ -78,9 +79,24 @@ async def lifespan(_app: fastapi.FastAPI):
 app = fastapi.FastAPI(lifespan=lifespan)
 logfire.instrument_fastapi(app)
 
+# Mount static files
+app.mount("/static", StaticFiles(directory=THIS_DIR / "static"), name="static")
+
 
 @app.get('/')
 async def index() -> FileResponse:
+    static_dir = THIS_DIR / "static"
+    if static_dir.exists() and (static_dir / "index.html").exists():
+        return FileResponse(static_dir / "index.html")
+    return FileResponse((THIS_DIR / 'chat_app.html'), media_type='text/html')
+
+@app.get('/{path:path}')
+async def serve_react(path: str):
+    static_dir = THIS_DIR / "static"
+    if path and (static_dir / path).exists():
+        return FileResponse(static_dir / path)
+    elif static_dir.exists() and (static_dir / "index.html").exists():
+        return FileResponse(static_dir / "index.html")
     return FileResponse((THIS_DIR / 'chat_app.html'), media_type='text/html')
 
 
