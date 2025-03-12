@@ -90,34 +90,32 @@ const ChatContainer = () => {
           const validLines = lines.filter(line => line.trim().length > 0);
           
           try {
-            // Process only the last line to avoid duplicates
-            if (validLines.length > 0) {
-              const lastLine = validLines[validLines.length - 1];
-              const lastMessage = JSON.parse(lastLine) as ChatMessage;
-              
-              setMessages(prev => {
+            // Process each line individually
+            for (const line of validLines) {
+              try {
+                const message = JSON.parse(line) as ChatMessage;
+                
                 // Skip user messages that we already added locally
-                if (lastMessage.role === 'user' && lastMessage.timestamp === sentMessageRef.current) {
-                  return prev;
+                if (message.role === 'user' && sentMessageRef.current) {
+                  continue;
                 }
                 
-                // Check if we already have this message
-                const messageExists = prev.some(m => 
-                  m.timestamp === lastMessage.timestamp && m.role === lastMessage.role
-                );
-                
-                if (messageExists) {
-                  // Update the existing message content
-                  return prev.map(m => 
-                    m.timestamp === lastMessage.timestamp && m.role === lastMessage.role
-                      ? lastMessage
-                      : m
+                setMessages(prev => {
+                  // Check if we already have this message by content and role
+                  const messageExists = prev.some(m => 
+                    m.content === message.content && 
+                    m.role === message.role
                   );
-                } else {
-                  // Add as a new message
-                  return [...prev, lastMessage];
-                }
-              });
+                  
+                  if (messageExists) {
+                    return prev;
+                  } else {
+                    return [...prev, message];
+                  }
+                });
+              } catch (parseError) {
+                console.error('Error parsing message line:', parseError);
+              }
             }
           } catch (e) {
             console.error('Error parsing message chunk:', e);
