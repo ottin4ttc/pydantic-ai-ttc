@@ -107,6 +107,7 @@ const ChatContainer = () => {
               // Check if the line is valid JSON
               if (line.trim().startsWith('{') && line.trim().endsWith('}')) {
                 const message = JSON.parse(line) as ChatMessage;
+                console.debug('Processing message:', message.role, message.timestamp.substring(0, 10), message.content.substring(0, 20) + '...');
                 
                 // Skip user messages that we already added locally
                 if (message.role === 'user' && message.content === sentMessageRef.current) {
@@ -118,8 +119,10 @@ const ChatContainer = () => {
                   
                   // Update the messages state
                   setMessages(prev => {
-                    // Find if we already have a model message
-                    const existingIndex = prev.findIndex(m => m.role === 'model');
+                    // Find if we already have a model message with the same timestamp
+                    const existingIndex = prev.findIndex(m => 
+                      m.role === 'model' && m.timestamp === message.timestamp
+                    );
                     
                     if (existingIndex >= 0) {
                       // Replace the existing message with the updated one
@@ -181,9 +184,9 @@ const ChatContainer = () => {
               No messages yet. Start a conversation!
             </div>
           ) : (
-            messages.map((message, index) => (
+            messages.map((message) => (
               <MessageItem
-                key={`${message.timestamp}-${index}`}
+                key={`${message.role}-${message.timestamp}`}
                 message={message}
               />
             ))
