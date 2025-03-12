@@ -29,13 +29,24 @@ class ChatService {
 
       const text = await response.text();
       
-      // Parse newline-delimited JSON
-      const messages: ChatMessage[] = text
-        .split('\n')
-        .filter((line: string) => line.trim().length > 0)
-        .map((line: string) => JSON.parse(line));
+      // Check if the response is HTML (error page) instead of JSON
+      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+        console.warn('Received HTML instead of JSON from chat history endpoint');
+        return [];
+      }
       
-      return messages;
+      // Parse newline-delimited JSON
+      try {
+        const messages: ChatMessage[] = text
+          .split('\n')
+          .filter((line: string) => line.trim().length > 0)
+          .map((line: string) => JSON.parse(line));
+        
+        return messages;
+      } catch (parseError) {
+        console.error('Error parsing chat history:', parseError);
+        return [];
+      }
     } catch (error) {
       console.error('Error fetching chat history:', error);
       return [];

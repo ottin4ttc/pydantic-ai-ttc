@@ -15,6 +15,7 @@ const ChatContainer = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const sentMessageRef = useRef<string | null>(null);
@@ -26,22 +27,23 @@ const ChatContainer = () => {
       try {
         setIsLoading(true);
         const history = await ChatService.getChatHistory();
-        setMessages(history);
+        if (history.length > 0) {
+          setMessages(history);
+        } else {
+          // If no history is returned, just show an empty chat
+          setMessages([]);
+        }
       } catch (error) {
         console.error('Failed to load chat history:', error);
-        setError('Failed to load chat history. Please try again.');
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to load chat history',
-        });
+        // Don't show error toast for initial load to improve UX
+        setMessages([]);
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchChatHistory();
-  }, [toast]);
+  }, []);
   
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -60,10 +62,14 @@ const ChatContainer = () => {
       timestamp: new Date().toISOString()
     };
     
-    // Clear previous messages to avoid duplication
-    setMessages([]);
     // Add user message immediately for better UX
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prev => {
+      // Filter out any existing user messages with the same content to avoid duplication
+      const filteredMessages = prev.filter(m => 
+        !(m.role === 'user' && m.content === userMessage.content)
+      );
+      return [...filteredMessages, userMessage];
+    });
     // Store the content to avoid duplication from API response
     sentMessageRef.current = userMessage.content;
     setInputValue('');
@@ -72,29 +78,34 @@ const ChatContainer = () => {
     
     try {
       // Send message to API
+      setIsStreaming(true);
       const response = await ChatService.sendMessage(userMessage.content);
       
       if (response.body) {
         const reader = response.body.getReader();
-        let receivedText = '';
+        // Track processed lines to avoid reprocessing
+        const processedLines = new Set<string>();
         
         while (true) {
           const { done, value } = await reader.read();
           
           if (done) break;
           
-          // Decode and process the chunk
+          // Decode the chunk
           const chunk = new TextDecoder().decode(value);
-          receivedText += chunk;
           
-          // Parse and update messages
-          const lines = receivedText.split('\n');
+          // Process each line in the chunk
+          const lines = chunk.split('\n');
           const validLines = lines.filter(line => line.trim().length > 0);
           
-          try {
-            // Process each line individually
-            for (const line of validLines) {
-              try {
+          for (const line of validLines) {
+            // Skip already processed lines
+            if (processedLines.has(line)) continue;
+            processedLines.add(line);
+            
+            try {
+              // Check if the line is valid JSON
+              if (line.trim().startsWith('{') && line.trim().endsWith('}')) {
                 const message = JSON.parse(line) as ChatMessage;
                 
                 // Skip user messages that we already added locally
@@ -102,25 +113,34 @@ const ChatContainer = () => {
                   continue;
                 }
                 
-                setMessages(prev => {
-                  // Check if we already have this message by content and role
-                  const messageExists = prev.some(m => 
-                    m.content === message.content && 
-                    m.role === message.role
-                  );
+                // For model messages, update the existing message or add a new one
+                if (message.role === 'model') {
                   
-                  if (messageExists) {
-                    return prev;
-                  } else {
-                    return [...prev, message];
-                  }
-                });
-              } catch (parseError) {
-                console.error('Error parsing message line:', parseError);
+                  // Update the messages state
+                  setMessages(prev => {
+                    // Find if we already have a model message
+                    const existingIndex = prev.findIndex(m => m.role === 'model');
+                    
+                    if (existingIndex >= 0) {
+                      // Replace the existing message with the updated one
+                      const newMessages = [...prev];
+                      newMessages[existingIndex] = message;
+                      return newMessages;
+                    } else {
+                      // Add as a new message
+                      return [...prev, message];
+                    }
+                  });
+                } else if (message.role !== 'user') {
+                  // For non-model, non-user messages (like system messages if any)
+                  setMessages(prev => [...prev, message]);
+                }
+              } else {
+                console.warn('Received non-JSON line:', line);
               }
+            } catch (parseError) {
+              console.error('Error parsing message line:', parseError);
             }
-          } catch (e) {
-            console.error('Error parsing message chunk:', e);
           }
         }
       }
@@ -134,6 +154,7 @@ const ChatContainer = () => {
       });
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
     }
   };
   
@@ -168,7 +189,7 @@ const ChatContainer = () => {
             ))
           )}
           
-          {isLoading && (
+          {isLoading && !isStreaming && (
             <div className="flex mb-4">
               <div className="bg-muted p-3 rounded-lg max-w-[80%] animate-pulse">
                 <div className="h-4 bg-muted-foreground/20 rounded w-3/4 mb-2"></div>
