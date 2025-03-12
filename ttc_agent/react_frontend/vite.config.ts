@@ -14,6 +14,14 @@ export default defineConfig({
       '/chat': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+      },
+      '/conversations': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/new_conversation': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
       }
     }
   }

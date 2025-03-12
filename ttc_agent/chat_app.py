@@ -79,6 +79,10 @@ async def lifespan(_app: fastapi.FastAPI):
 app = fastapi.FastAPI(lifespan=lifespan)
 logfire.instrument_fastapi(app)
 
+# Import and include only the direct router for new conversation
+from ttc_agent.direct_api import router as direct_router
+app.include_router(direct_router)
+
 # Mount static files
 app.mount("/static", StaticFiles(directory=THIS_DIR / "static"), name="static")
 
@@ -265,4 +269,4 @@ if __name__ == '__main__':
 
     uvicorn.run(
         'ttc_agent.chat_app:app', reload=True, reload_dirs=[str(THIS_DIR)]
-    ) 
+    )            
