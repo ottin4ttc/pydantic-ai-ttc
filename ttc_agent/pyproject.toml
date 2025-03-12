@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ttc_agent"
+version = "0.0.1"
+description = "AI Agents for TTC users"
+authors = [{ name = "Lynn Ning", email = "lynn.ning@ttcadvisory.com" }]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "pydantic-ai-slim[openai,anthropic]==0.0.37",
+    "asyncpg>=0.30.0",
+    "fastapi>=0.115.4",
+    "logfire[asyncpg,fastapi,sqlite3]>=2.6",
+    "python-multipart>=0.0.17",
+    "rich>=13.9.2",
+    "uvicorn>=0.32.0",
+    "devtools>=0.12.2",
+    "gradio>=5.9.0; python_version>'3.9'",
+    "python-dotenv>=1.0.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["ttc_agent"]
+
+[tool.uv.sources]
+pydantic-ai-slim = { workspace = true }
+
+[tool.ruff]
+extend = "../pyproject.toml"
+line-length = 88
