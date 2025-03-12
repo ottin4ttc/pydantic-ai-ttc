@@ -1,11 +1,19 @@
 export interface ChatMessage {
-  role: 'user' | 'model';
+  role: string;
   content: string;
-  timestamp: string;
+  timestamp?: string;
 }
 
-export interface ChatState {
-  messages: ChatMessage[];
-  isLoading: boolean;
+export interface Conversation {
+  id: string;
+  role_type: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationState {
+  conversations: Conversation[];
+  currentConversationId: string | null;
+  loading: boolean;
   error: string | null;
 }

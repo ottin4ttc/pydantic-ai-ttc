@@ -1,4 +1,4 @@
-import { ChatMessage } from '../types/chat';
+import { ChatMessage, Conversation } from '../types/chat';
 
 /**
  * Service for interacting with the chat API
@@ -10,68 +10,89 @@ class ChatService {
     this.baseUrl = baseUrl;
   }
 
-  /**
-   * Fetches chat history from the API
-   * @returns Promise with array of chat messages
-   */
-  async getChatHistory(): Promise<ChatMessage[]> {
+  async createConversation(roleType: string = 'default'): Promise<Conversation> {
     try {
-      const response = await fetch(`${this.baseUrl}/chat/`, {
-        method: 'GET',
+      const response = await fetch(`${this.baseUrl}/conversations`, {
+        method: 'POST',
         headers: {
-          'Accept': 'text/plain',
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ role_type: roleType }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create conversation: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      throw error;
+    }
+  }
+
+  async getConversations(): Promise<Conversation[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/conversations`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch conversations: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+      return [];
+    }
+  }
+
+  async getConversation(id: string): Promise<Conversation | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/conversations/${id}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch conversation: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching conversation:', error);
+      return null;
+    }
+  }
+
+  async getChatHistory(conversationId: string): Promise<ChatMessage[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/chat/${conversationId}/history`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch chat history: ${response.status}`);
       }
 
-      const text = await response.text();
-      
-      // Check if the response is HTML (error page) instead of JSON
-      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-        console.warn('Received HTML instead of JSON from chat history endpoint');
-        return [];
-      }
-      
-      // Parse newline-delimited JSON
-      try {
-        const messages: ChatMessage[] = text
-          .split('\n')
-          .filter((line: string) => line.trim().length > 0)
-          .map((line: string) => JSON.parse(line));
-        
-        return messages;
-      } catch (parseError) {
-        console.error('Error parsing chat history:', parseError);
-        return [];
-      }
+      return await response.json();
     } catch (error) {
       console.error('Error fetching chat history:', error);
       return [];
     }
   }
 
-  /**
-   * Sends a message to the API and returns a readable stream of the response
-   * @param prompt The message to send
-   * @returns Promise with a Response object
-   */
-  async sendMessage(prompt: string): Promise<Response> {
+  async sendMessage(content: string, conversationId: string, roleType: string = 'default'): Promise<Response> {
     try {
-      const formData = new FormData();
-      formData.append('prompt', prompt);
-      
-      const response = await fetch(`${this.baseUrl}/chat/`, {
+      const response = await fetch(`${this.baseUrl}/chat/${conversationId}`, {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content,
+          role_type: roleType,
+        }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to send message: ${response.status}`);
       }
-      
+
       return response;
     } catch (error) {
       console.error('Error sending message:', error);
