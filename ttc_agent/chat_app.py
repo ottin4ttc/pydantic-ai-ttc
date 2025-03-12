@@ -80,7 +80,7 @@ app = fastapi.FastAPI(lifespan=lifespan)
 logfire.instrument_fastapi(app)
 
 # Import and include only the direct router for new conversation
-from ttc_agent.direct_api import router as direct_router
+from .direct_api import router as direct_router
 app.include_router(direct_router)
 
 # Mount static files
@@ -93,16 +93,6 @@ async def index() -> FileResponse:
     if static_dir.exists() and (static_dir / "index.html").exists():
         return FileResponse(static_dir / "index.html")
     return FileResponse((THIS_DIR / 'chat_app.html'), media_type='text/html')
-
-@app.get('/{path:path}')
-async def serve_react(path: str):
-    static_dir = THIS_DIR / "static"
-    if path and (static_dir / path).exists():
-        return FileResponse(static_dir / path)
-    elif static_dir.exists() and (static_dir / "index.html").exists():
-        return FileResponse(static_dir / "index.html")
-    return FileResponse((THIS_DIR / 'chat_app.html'), media_type='text/html')
-
 
 @app.get('/chat_app.ts')
 async def main_ts() -> FileResponse:
@@ -184,6 +174,99 @@ async def post_chat(
     return StreamingResponse(stream_messages(), media_type='text/plain')
 
 
+@app.post('/chat/{conversation_id}')
+async def post_chat_with_id(
+    conversation_id: str,
+    request: Request,
+    database: Database = Depends(get_db)
+) -> StreamingResponse:
+    # 解析请求体中的 JSON 数据
+    data = await request.json()
+    prompt = data.get('content', '')
+    # role_type 暂时未使用，但保留以便将来扩展
+    # role_type = data.get('role_type', 'default')
+    
+    async def stream_messages():
+        """Streams new line delimited JSON `Message`s to the client."""
+        # stream the user prompt so that can be displayed straight away
+        yield (
+            json.dumps(
+                {
+                    'role': 'user',
+                    'timestamp': datetime.now(tz=timezone.utc).isoformat(),
+                    'content': prompt,
+                }
+            ).encode('utf-8')
+            + b'\n'
+        )
+        # 获取特定会话的聊天历史
+        messages = await database.get_messages(conversation_id)
+        # run the agent with the user prompt and the chat history
+        async with agent.run_stream(prompt, message_history=messages) as result:
+            async for text in result.stream(debounce_by=0.01):
+                # text here is a `str` and the frontend wants
+                # JSON encoded ModelResponse, so we create one
+                m = ModelResponse(parts=[TextPart(text)], timestamp=result.timestamp())
+                yield json.dumps(to_chat_message(m)).encode('utf-8') + b'\n'
+
+        # 将新消息添加到特定会话
+        await database.add_messages(result.new_messages_json(), conversation_id)
+
+    return StreamingResponse(stream_messages(), media_type='text/plain')
+
+
+@app.get('/chat/{conversation_id}/history')
+async def get_chat_history_by_id(
+    conversation_id: str,
+    database: Database = Depends(get_db)
+) -> list[ChatMessage]:
+    # 获取特定会话的聊天历史
+    msgs = await database.get_messages(conversation_id)
+    return [to_chat_message(m) for m in msgs]
+
+
+class ConversationDict(TypedDict):
+    """会话数据的类型定义"""
+    id: str
+    role_type: str
+    created_at: str
+    updated_at: str
+
+@app.get('/conversations')
+async def get_conversations() -> list[ConversationDict]:
+    # 由于我们目前没有真正的会话存储，所以返回一个模拟的会话列表
+    # 在实际应用中，这应该从数据库中获取
+    return [
+        {
+            "id": "d1c689f1-5d92-4af3-a123-25d783870486",
+            "role_type": "default",
+            "created_at": datetime.now(tz=timezone.utc).isoformat(),
+            "updated_at": datetime.now(tz=timezone.utc).isoformat()
+        }
+    ]
+
+@app.get('/conversations/{conversation_id}')
+async def get_conversation(conversation_id: str) -> ConversationDict:
+    # 由于我们目前没有真正的会话存储，所以返回一个模拟的会话
+    # 在实际应用中，这应该从数据库中获取
+    return {
+        "id": conversation_id,
+        "role_type": "default",
+        "created_at": datetime.now(tz=timezone.utc).isoformat(),
+        "updated_at": datetime.now(tz=timezone.utc).isoformat()
+    }
+
+# 将通配符路由移到最后，确保所有 API 路由先匹配
+@app.get('/{path:path}')
+async def serve_react(path: str):
+    static_dir = THIS_DIR / "static"
+    if path and (static_dir / path).exists():
+        return FileResponse(static_dir / path)
+    elif static_dir.exists() and (static_dir / "index.html").exists():
+        return FileResponse(static_dir / "index.html")
+    return FileResponse((THIS_DIR / 'chat_app.html'), media_type='text/html')
+
+
 P = ParamSpec('P')
 R = TypeVar('R')
 
@@ -220,30 +303,64 @@ class Database:
         con = sqlite3.connect(str(file))
         con = logfire.instrument_sqlite3(con)
         cur = con.cursor()
-        cur.execute(
-            'CREATE TABLE IF NOT EXISTS messages (id INT PRIMARY KEY, message_list TEXT);'
-        )
-        con.commit()
+        
+        # 检查表是否存在
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='messages'")
+        table_exists = cur.fetchone() is not None
+        
+        if table_exists:
+            # 检查表结构
+            cur.execute("PRAGMA table_info(messages)")
+            columns = [column[1] for column in cur.fetchall()]
+            
+            # 如果没有 conversation_id 列，添加它
+            if 'conversation_id' not in columns:
+                print("Adding conversation_id column to messages table")
+                cur.execute("ALTER TABLE messages ADD COLUMN conversation_id TEXT DEFAULT 'default'")
+                con.commit()
+        else:
+            # 创建新表
+            cur.execute(
+                'CREATE TABLE messages (id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id TEXT, message_list TEXT);'
+            )
+            con.commit()
+        
         return con
 
-    async def add_messages(self, messages: bytes):
-        await self._asyncify(
-            self._execute,
-            'INSERT INTO messages (message_list) VALUES (?);',
-            messages,
-            commit=True,
-        )
-        await self._asyncify(self.con.commit)
+    async def add_messages(self, messages: bytes, conversation_id: str = "default"):
+        try:
+            await self._asyncify(
+                self._execute,
+                'INSERT INTO messages (conversation_id, message_list) VALUES (?, ?);',
+                conversation_id,
+                messages,
+                commit=True,
+            )
+            await self._asyncify(self.con.commit)
+        except Exception as e:
+            print(f"Error adding messages: {e}")
 
-    async def get_messages(self) -> list[ModelMessage]:
-        c = await self._asyncify(
-            self._execute, 'SELECT message_list FROM messages order by id'
-        )
-        rows = await self._asyncify(c.fetchall)
-        messages: list[ModelMessage] = []
-        for row in rows:
-            messages.extend(ModelMessagesTypeAdapter.validate_json(row[0]))
-        return messages
+    async def get_messages(self, conversation_id: str | None = None) -> list[ModelMessage]:
+        try:
+            if conversation_id:
+                # 如果提供了会话 ID，只获取该会话的消息
+                c = await self._asyncify(
+                    self._execute, 'SELECT message_list FROM messages WHERE conversation_id = ? ORDER BY id', conversation_id
+                )
+            else:
+                # 否则获取所有消息
+                c = await self._asyncify(
+                    self._execute, 'SELECT message_list FROM messages ORDER BY id'
+                )
+            rows = await self._asyncify(c.fetchall)
+            messages: list[ModelMessage] = []
+            for row in rows:
+                messages.extend(ModelMessagesTypeAdapter.validate_json(row[0]))
+            return messages
+        except Exception as e:
+            print(f"Error getting messages: {e}")
+            # 如果出错，返回空列表
+            return []
 
     def _execute(
         self, sql: LiteralString, *args: Any, commit: bool = False
