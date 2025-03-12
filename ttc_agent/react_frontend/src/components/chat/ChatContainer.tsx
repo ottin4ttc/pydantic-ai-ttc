@@ -87,12 +87,30 @@ const ChatContainer = () => {
           const validLines = lines.filter(line => line.trim().length > 0);
           
           try {
-            const newMessages = validLines.map(line => JSON.parse(line) as ChatMessage);
-            setMessages(prev => {
-              // Filter out duplicates based on timestamp
-              const timestamps = new Set(newMessages.map(m => m.timestamp));
-              return [...prev.filter(m => !timestamps.has(m.timestamp) || m.role === 'user'), ...newMessages];
-            });
+            // Process only the last line to avoid duplicates
+            if (validLines.length > 0) {
+              const lastLine = validLines[validLines.length - 1];
+              const lastMessage = JSON.parse(lastLine) as ChatMessage;
+              
+              setMessages(prev => {
+                // Check if we already have this message
+                const messageExists = prev.some(m => 
+                  m.timestamp === lastMessage.timestamp && m.role === lastMessage.role
+                );
+                
+                if (messageExists) {
+                  // Update the existing message content
+                  return prev.map(m => 
+                    m.timestamp === lastMessage.timestamp && m.role === lastMessage.role
+                      ? lastMessage
+                      : m
+                  );
+                } else {
+                  // Add as a new message
+                  return [...prev, lastMessage];
+                }
+              });
+            }
           } catch (e) {
             console.error('Error parsing message chunk:', e);
           }
