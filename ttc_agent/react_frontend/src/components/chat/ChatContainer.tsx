@@ -60,10 +60,12 @@ const ChatContainer = () => {
       timestamp: new Date().toISOString()
     };
     
+    // Clear previous messages to avoid duplication
+    setMessages([]);
     // Add user message immediately for better UX
     setMessages(prev => [...prev, userMessage]);
-    // Store the timestamp to avoid duplication from API response
-    sentMessageRef.current = userMessage.timestamp;
+    // Store the content to avoid duplication from API response
+    sentMessageRef.current = userMessage.content;
     setInputValue('');
     setIsLoading(true);
     setError(null);
@@ -96,7 +98,7 @@ const ChatContainer = () => {
                 const message = JSON.parse(line) as ChatMessage;
                 
                 // Skip user messages that we already added locally
-                if (message.role === 'user' && sentMessageRef.current) {
+                if (message.role === 'user' && message.content === sentMessageRef.current) {
                   continue;
                 }
                 
