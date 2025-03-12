@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 import uuid
-from typing import Optional
+from typing import Optional, List
 from .database import Database
 
 @dataclass
@@ -43,6 +43,23 @@ class ConversationService:
             commit=True
         )
         return conversation
+
+    async def get_conversations(self) -> List[Conversation]:
+        """获取所有会话"""
+        cursor = await self.db._asyncify(
+            self.db._execute,
+            "SELECT id, role_type, created_at, updated_at FROM conversations ORDER BY updated_at DESC"
+        )
+        rows = await self.db._asyncify(cursor.fetchall)
+        return [
+            Conversation(
+                id=row[0],
+                role_type=row[1],
+                created_at=datetime.fromisoformat(row[2]),
+                updated_at=datetime.fromisoformat(row[3])
+            )
+            for row in rows
+        ]
 
     async def get_conversation(self, conversation_id: str) -> Optional[Conversation]:
         """获取会话信息"""
