@@ -7,6 +7,7 @@ export interface ChatMessage {
 export interface Conversation {
   id: string;
   role_type: string;
+  bot_name: string;  // Add bot_name field
   created_at: string;
   updated_at: string;
 }

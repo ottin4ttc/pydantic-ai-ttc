@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { useToast } from '../../hooks/use-toast';
 import MessageItem from './MessageItem';
 import { ConversationList } from './ConversationList';
+import BotSelectionDialog from './BotSelectionDialog';
 import ChatService from '../../services/ChatService';
 import { ChatMessage, Conversation } from '../../types/chat';
 
@@ -20,6 +21,7 @@ const ChatContainer = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isBotDialogOpen, setIsBotDialogOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const sentMessageRef = useRef<string | null>(null);
   const { toast } = useToast();
@@ -83,10 +85,15 @@ const ChatContainer = () => {
     }
   }, [messages]);
   
-  const handleNewConversation = async () => {
+  const handleNewConversation = () => {
+    // Open the bot selection dialog instead of creating a conversation directly
+    setIsBotDialogOpen(true);
+  };
+  
+  const handleCreateBot = async (roleType: string, botName: string) => {
     try {
       setIsLoading(true);
-      const newConversation = await ChatService.createConversation();
+      const newConversation = await ChatService.createConversation(roleType, botName);
       setConversations(prev => [newConversation, ...prev]);
       setCurrentConversationId(newConversation.id);
       setMessages([]);
@@ -195,6 +202,13 @@ const ChatContainer = () => {
         currentConversationId={currentConversationId}
         onSelectConversation={setCurrentConversationId}
         onNewConversation={handleNewConversation}
+      />
+      
+      <BotSelectionDialog
+        open={isBotDialogOpen}
+        onOpenChange={setIsBotDialogOpen}
+        onCreateBot={handleCreateBot}
+        currentBotType={conversations.find(c => c.id === currentConversationId)?.role_type}
       />
       
       <Card className="flex flex-col h-full border shadow-md flex-1" data-testid="chat-main">

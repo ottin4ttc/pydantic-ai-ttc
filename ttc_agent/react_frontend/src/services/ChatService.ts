@@ -10,15 +10,19 @@ class ChatService {
     this.baseUrl = baseUrl;
   }
 
-  async createConversation(roleType: string = 'default'): Promise<Conversation> {
+  async createConversation(roleType: string = 'default', botName: string = 'Assistant'): Promise<Conversation> {
     try {
-      // Use only the simplified endpoint that doesn't require a request body
-      console.log('Creating new conversation using direct endpoint');
+      // Send role_type and bot_name in the request body
+      console.log('Creating new conversation with bot:', botName);
       const response = await fetch(`${this.baseUrl}/api/new_conversation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          role_type: roleType,
+          bot_name: botName
+        })
       });
 
       if (!response.ok) {

@@ -43,10 +43,15 @@ export function ConversationList({
             data-conversation-id={conversation.id}
             data-is-current={currentConversationId === conversation.id}
           >
-            {new Date(conversation.created_at).toLocaleString()}
+            <div className="flex flex-col items-start">
+              <span className="font-medium">{conversation.bot_name}</span>
+              <span className="text-xs text-gray-500">
+                {new Date(conversation.created_at).toLocaleString()}
+              </span>
+            </div>
           </Button>
         ))}
       </div>
     </div>
   );
-} 
+}  

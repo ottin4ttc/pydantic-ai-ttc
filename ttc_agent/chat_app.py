@@ -304,11 +304,11 @@ class Database:
         con = logfire.instrument_sqlite3(con)
         cur = con.cursor()
         
-        # 检查表是否存在
+        # 检查消息表是否存在
         cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='messages'")
-        table_exists = cur.fetchone() is not None
+        messages_table_exists = cur.fetchone() is not None
         
-        if table_exists:
+        if messages_table_exists:
             # 检查表结构
             cur.execute("PRAGMA table_info(messages)")
             columns = [column[1] for column in cur.fetchall()]
@@ -322,6 +322,35 @@ class Database:
             # 创建新表
             cur.execute(
                 'CREATE TABLE messages (id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id TEXT, message_list TEXT);'
+            )
+            con.commit()
+        
+        # 检查会话表是否存在
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='conversations'")
+        conversations_table_exists = cur.fetchone() is not None
+        
+        if conversations_table_exists:
+            # 检查表结构
+            cur.execute("PRAGMA table_info(conversations)")
+            columns = [column[1] for column in cur.fetchall()]
+            
+            # 如果没有 bot_name 列，添加它
+            if 'bot_name' not in columns:
+                print("Adding bot_name column to conversations table")
+                cur.execute("ALTER TABLE conversations ADD COLUMN bot_name TEXT DEFAULT 'Assistant'")
+                con.commit()
+        else:
+            # 创建新表
+            cur.execute(
+                '''
+                CREATE TABLE IF NOT EXISTS conversations (
+                    id TEXT PRIMARY KEY,
+                    role_type TEXT,
+                    bot_name TEXT,
+                    created_at TEXT,
+                    updated_at TEXT
+                );
+                '''
             )
             con.commit()
         
@@ -386,4 +415,4 @@ if __name__ == '__main__':
 
     uvicorn.run(
         'ttc_agent.chat_app:app', reload=True, reload_dirs=[str(THIS_DIR)]
-    )                                                
+    )                                                                        
