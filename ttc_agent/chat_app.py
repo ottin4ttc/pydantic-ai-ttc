@@ -82,8 +82,8 @@ logfire.instrument_fastapi(app)
 # Import and include routers
 from .direct_api import router as direct_router
 from .api import router as api_router
-app.include_router(direct_router)
-app.include_router(api_router)
+app.include_router(direct_router, prefix="/api")  # Keep existing API prefix for compatibility
+app.include_router(api_router, prefix="/api")
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=THIS_DIR / "static"), name="static")
@@ -417,4 +417,4 @@ if __name__ == '__main__':
 
     uvicorn.run(
         'ttc_agent.chat_app:app', reload=True, reload_dirs=[str(THIS_DIR)]
-    )                                                                                                                                                
+    )                                                                                                                                                                                                                                                                                                                                                                                                                                                

@@ -6,7 +6,7 @@ from datetime import datetime
 # Create a direct router for the new conversation endpoint
 router = APIRouter()
 
-@router.post("/api/new_conversation")
+@router.post("/new_conversation")
 async def new_conversation(request: Request) -> JSONResponse:
     """创建新会话 - 支持选择或创建bot"""
     try:
