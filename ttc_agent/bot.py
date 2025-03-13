@@ -37,15 +37,15 @@ class BotService:
         """Create a new bot configuration"""
         # If this bot is set as default, unset any existing default
         if is_default:
-            await self.db._asyncify(
-                self.db._execute,
+            await self.db.asyncify(
+                self.db.execute,
                 "UPDATE bots SET is_default = 0",
                 commit=True
             )
         
         bot = Bot.create(name, role_type, system_prompt, is_default)
-        await self.db._asyncify(
-            self.db._execute,
+        await self.db.asyncify(
+            self.db.execute,
             """
             INSERT INTO bots (id, name, role_type, system_prompt, is_default, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -63,11 +63,11 @@ class BotService:
 
     async def get_bots(self) -> List[Bot]:
         """Get all bot configurations"""
-        cursor = await self.db._asyncify(
-            self.db._execute,
+        cursor = await self.db.asyncify(
+            self.db.execute,
             "SELECT id, name, role_type, system_prompt, is_default, created_at, updated_at FROM bots ORDER BY name"
         )
-        rows = await self.db._asyncify(cursor.fetchall)
+        rows = await self.db.asyncify(cursor.fetchall)
         return [
             Bot(
                 id=row[0],
@@ -83,12 +83,12 @@ class BotService:
 
     async def get_bot(self, bot_id: str) -> Optional[Bot]:
         """Get a bot configuration by ID"""
-        cursor = await self.db._asyncify(
-            self.db._execute,
+        cursor = await self.db.asyncify(
+            self.db.execute,
             "SELECT id, name, role_type, system_prompt, is_default, created_at, updated_at FROM bots WHERE id = ?",
             bot_id
         )
-        row = await self.db._asyncify(cursor.fetchone)
+        row = await self.db.asyncify(cursor.fetchone)
         if row is None:
             return None
         return Bot(
@@ -103,11 +103,11 @@ class BotService:
 
     async def get_default_bot(self) -> Optional[Bot]:
         """Get the default bot configuration"""
-        cursor = await self.db._asyncify(
-            self.db._execute,
+        cursor = await self.db.asyncify(
+            self.db.execute,
             "SELECT id, name, role_type, system_prompt, is_default, created_at, updated_at FROM bots WHERE is_default = 1"
         )
-        row = await self.db._asyncify(cursor.fetchone)
+        row = await self.db.asyncify(cursor.fetchone)
         if row is None:
             return None
         return Bot(
@@ -124,15 +124,15 @@ class BotService:
         """Update a bot configuration"""
         # If this bot is set as default, unset any existing default
         if is_default:
-            await self.db._asyncify(
-                self.db._execute,
+            await self.db.asyncify(
+                self.db.execute,
                 "UPDATE bots SET is_default = 0",
                 commit=True
             )
         
         now = datetime.now()
-        await self.db._asyncify(
-            self.db._execute,
+        await self.db.asyncify(
+            self.db.execute,
             """
             UPDATE bots 
             SET name = ?, role_type = ?, system_prompt = ?, is_default = ?, updated_at = ?
@@ -159,8 +159,8 @@ class BotService:
         if bot.is_default:
             return False
             
-        await self.db._asyncify(
-            self.db._execute,
+        await self.db.asyncify(
+            self.db.execute,
             "DELETE FROM bots WHERE id = ?",
             bot_id,
             commit=True

@@ -49,7 +49,7 @@ class Database:
         try:
             yield slf
         finally:
-            await slf._asyncify(con.close)
+            await slf.asyncify(con.close)
 
     @staticmethod
     def _connect(file: Path) -> sqlite3.Connection:
@@ -139,7 +139,7 @@ Always maintain a helpful, professional, and friendly tone. Communicate clearly 
             messages.extend(ModelMessagesTypeAdapter.validate_json(row[0]))
         return messages
 
-    def _execute(
+    def execute(
         self, sql: LiteralString, *args: Any, commit: bool = False
     ) -> sqlite3.Cursor:
         cur = self.con.cursor()
@@ -148,7 +148,7 @@ Always maintain a helpful, professional, and friendly tone. Communicate clearly 
             self.con.commit()
         return cur
 
-    async def _asyncify(
+    async def asyncify(
         self, func: Callable[P, R], *args: P.args, **kwargs: P.kwargs
     ) -> R:
         return await self._loop.run_in_executor(  # type: ignore
