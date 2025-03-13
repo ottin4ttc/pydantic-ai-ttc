@@ -91,8 +91,8 @@ start_frontend
 
 echo "=== Both services are running ==="
 echo "Backend: http://127.0.0.1:8000"
-echo "Frontend: http://localhost:5173"
+echo "Frontend: http://localhost:5173 (or another port if 5173 is in use)"
 echo "Press Ctrl+C to stop all services."
 
 # Keep the script running
-wait 
+wait  

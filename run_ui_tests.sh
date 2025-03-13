@@ -168,10 +168,17 @@ start_services() {
     echo "Waiting for frontend to start..."
     attempt=0
     while [ $attempt -lt $max_attempts ]; do
-        if curl -s http://localhost:5173 > /dev/null 2>&1; then
-            echo "✓ Frontend is ready"
-            return 0
-        fi
+        # Try multiple ports since Vite may use different ports if default is in use
+        for port in 5173 5174 5175 5176 5177 5178; do
+            if curl -s "http://localhost:${port}" > /dev/null 2>&1; then
+                echo "✓ Frontend is ready on port ${port}"
+                echo "FRONTEND_PORT=${port}" > frontend_port.txt
+                return 0
+            fi
+        done
+        
+        # If we get here, no port was successful
+        echo "❌ Frontend not responding on any port"
         attempt=$((attempt+1))
         if [ $((attempt % 5)) -eq 0 ]; then
             echo "Still waiting for frontend... ($attempt/$max_attempts)"
@@ -244,7 +251,17 @@ main() {
     
     # 等待额外的时间确保服务完全就绪
     echo "Waiting for services to stabilize..."
-    sleep 5
+    sleep 20  # 增加等待时间，确保前端和后端服务完全启动
+    
+    # 检查前端端口并将其写入临时文件供测试使用
+    if [ -f "frontend_port.txt" ]; then
+        FRONTEND_PORT=$(grep -oP 'FRONTEND_PORT=\K\d+' frontend_port.txt)
+        echo "Frontend is running on port: ${FRONTEND_PORT}"
+        # 导出为环境变量供测试使用
+        export FRONTEND_PORT
+    else
+        echo "Warning: Could not determine frontend port"
+    fi
     
     echo "=== Running UI tests ==="
     # 运行测试
@@ -287,4 +304,4 @@ main() {
 }
 
 # 运行主流程
-main  
+main          

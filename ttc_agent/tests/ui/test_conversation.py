@@ -1,6 +1,7 @@
 import pytest
 import time
 import traceback
+import os
 from playwright.sync_api import Page
 from ttc_agent.tests.ui.test_utils import UITestResult
 from ttc_agent.tests.ui.conftest import RUN_DIR, LOGGER, REPORT_GENERATOR
@@ -13,7 +14,44 @@ class ConversationPage:
     def navigate_to_home(self):
         """Navigate to the home page and wait for it to load"""
         LOGGER.info("Navigating to home page")
-        self.page.goto("http://localhost:5173")
+        
+        # Try multiple ports since Vite may use different ports if default is in use
+        ports_to_try = [5173, 5174, 5175, 5176, 5177, 5178]
+        connected = False
+        
+        # Check if frontend port is specified in environment
+        frontend_port_env = os.environ.get("FRONTEND_PORT")
+        if frontend_port_env and frontend_port_env.isdigit():
+            # If we have a known port from environment, try it first
+            port = int(frontend_port_env)
+            LOGGER.info(f"Using frontend port from environment: {port}")
+            ports_to_try = [port] + [p for p in ports_to_try if p != port]
+        
+        for port in ports_to_try:
+            try:
+                url = f"http://localhost:{port}"
+                LOGGER.info(f"Trying to connect to {url}")
+                # Use shorter timeout for quick failure
+                self.page.goto(url, timeout=5000)
+                
+                # Check if page loaded successfully by looking for a common element
+                try:
+                    # Wait a short time for basic page elements
+                    self.page.wait_for_selector("body", timeout=2000)
+                    LOGGER.info(f"Successfully connected to {url}")
+                    connected = True
+                    break
+                except Exception as e:
+                    LOGGER.debug(f"Page at {url} loaded but no content found: {str(e)}")
+                    continue
+            except Exception as e:
+                LOGGER.debug(f"Failed to connect to {url}: {str(e)}")
+                continue
+        
+        if not connected:
+            LOGGER.error("Failed to connect to frontend on any port")
+            raise Exception("Could not connect to frontend service on any port")
+            
         LOGGER.debug("Waiting for page to load")
         self.page.wait_for_load_state("domcontentloaded")
         self.page.wait_for_load_state("networkidle")
@@ -70,8 +108,26 @@ class ConversationPage:
             # 选择机器人类型 - 只有在非默认类型时才选择
             if bot_type != "customer_service":  # 默认已经选择了customer_service
                 LOGGER.debug(f"Selecting bot type: {bot_type}")
-                # 不尝试选择类型，直接使用默认类型
-                LOGGER.debug("Skipping bot type selection due to UI interaction issues")
+                try:
+                    # 尝试选择机器人类型
+                    selector = self.page.locator('[data-testid="bot-type-selector"]')
+                    if selector.count() > 0:
+                        selector.click()
+                        time.sleep(0.5)  # 等待下拉菜单打开
+                        
+                        # 选择对应的选项
+                        option_selector = f'[data-value="{bot_type}"]'
+                        option = self.page.locator(option_selector)
+                        if option.count() > 0:
+                            option.click()
+                            LOGGER.debug(f"Selected bot type: {bot_type}")
+                        else:
+                            LOGGER.warning(f"Bot type option not found: {bot_type}")
+                    else:
+                        LOGGER.warning("Bot type selector not found")
+                except Exception as e:
+                    LOGGER.warning(f"Error selecting bot type: {str(e)}")
+                    LOGGER.debug("Skipping bot type selection due to UI interaction issues")
             
             # 点击创建按钮
             LOGGER.debug("Clicking create button")
@@ -228,4 +284,4 @@ class ConversationPage:
             error_msg = f"Error getting last message: {str(e)}"
             LOGGER.error(error_msg)
             LOGGER.error(traceback.format_exc())
-            return ""   
+            return ""
