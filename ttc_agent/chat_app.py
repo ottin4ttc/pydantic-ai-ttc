@@ -443,7 +443,7 @@ class Database:
             # 如果出错，返回空列表
             return []
 
-    def _execute(
+    def execute(
         self, sql: LiteralString, *args: Any, commit: bool = False
     ) -> sqlite3.Cursor:
         cur = self.con.cursor()
@@ -452,7 +452,7 @@ class Database:
             self.con.commit()
         return cur
 
-    async def _asyncify(
+    async def asyncify(
         self, func: Callable[P, R], *args: P.args, **kwargs: P.kwargs
     ) -> R:
         return await self._loop.run_in_executor(  # type: ignore
@@ -467,4 +467,4 @@ if __name__ == '__main__':
 
     uvicorn.run(
         'ttc_agent.chat_app:app', reload=True, reload_dirs=[str(THIS_DIR)]
-    )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+    )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
