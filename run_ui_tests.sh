@@ -263,7 +263,7 @@ main() {
     fi
     
     echo "=== Running UI tests ==="
-    # 运行测试
+    # 运行测试 - 只运行test_combined.py中的测试，避免重复运行
     python -m pytest ttc_agent/tests/ui/test_combined.py -v
     TEST_RESULT=$?
     
