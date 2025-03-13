@@ -173,12 +173,11 @@ start_services() {
             if curl -s "http://localhost:${port}" > /dev/null 2>&1; then
                 echo "✓ Frontend is ready on port ${port}"
                 echo "FRONTEND_PORT=${port}" > frontend_port.txt
+                export FRONTEND_PORT=${port}
                 return 0
             fi
         done
         
-        # If we get here, no port was successful
-        echo "❌ Frontend not responding on any port"
         attempt=$((attempt+1))
         if [ $((attempt % 5)) -eq 0 ]; then
             echo "Still waiting for frontend... ($attempt/$max_attempts)"
@@ -251,7 +250,7 @@ main() {
     
     # 等待额外的时间确保服务完全就绪
     echo "Waiting for services to stabilize..."
-    sleep 20  # 增加等待时间，确保前端和后端服务完全启动
+    sleep 25  # 增加等待时间，确保前端和后端服务完全启动
     
     # 检查前端端口并将其写入临时文件供测试使用
     if [ -f "frontend_port.txt" ]; then
@@ -265,7 +264,7 @@ main() {
     
     echo "=== Running UI tests ==="
     # 运行测试
-    python -m pytest ttc_agent/tests/ui/test_send_message.py ttc_agent/tests/ui/test_create_conversation.py ttc_agent/tests/ui/test_conversation_switching.py -v
+    python -m pytest ttc_agent/tests/ui/test_combined.py -v
     TEST_RESULT=$?
     
     # 查找最新的测试报告
@@ -304,4 +303,4 @@ main() {
 }
 
 # 运行主流程
-main          
+main
