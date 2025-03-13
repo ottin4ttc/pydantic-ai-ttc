@@ -21,7 +21,7 @@ def test_create_conversation(conversation_page: ConversationPage):
         LOGGER.info("Starting test_create_conversation")
         
         # 截图以便调试
-        test_result.add_screenshot("test-start", conversation_page.page)
+        test_result.add_screenshot("initial-page-state", conversation_page.page)
         
         # Create first conversation with customer service bot
         LOGGER.info("Step 1: Creating customer service bot conversation")
@@ -50,7 +50,7 @@ def test_create_conversation(conversation_page: ConversationPage):
         assert current_id == ts_conv_id, f"Expected current conversation to be {ts_conv_id}, got {current_id}"
         
         # 截图以便调试
-        test_result.add_screenshot("final-state", conversation_page.page)
+        test_result.add_screenshot("both-conversations-created", conversation_page.page)
         
         LOGGER.info("Test completed successfully!")
         test_result.mark_passed()

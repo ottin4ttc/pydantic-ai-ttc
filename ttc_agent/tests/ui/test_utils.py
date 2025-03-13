@@ -239,7 +239,7 @@ STEP_TEMPLATE = """
 SCREENSHOT_TEMPLATE = """
 <div class="screenshot">
     <img src="{{path}}" alt="{{name}}">
-    <div class="screenshot-caption">{{name}}</div>
+    <div class="screenshot-caption">{{test_name}} - {{name}}</div>
 </div>
 """
 
@@ -320,7 +320,9 @@ class UITestResult:
     def add_screenshot(self, name: str, page: Page) -> str:
         """添加截图"""
         # 在screenshots目录中保存原始截图
-        screenshot_filename = f"{name}-{len(self.screenshots)}.png"
+        # 使用测试名称作为前缀，确保不同测试的截图有唯一标识
+        test_name_prefix = self.name.replace(" ", "_").lower()
+        screenshot_filename = f"{test_name_prefix}_{name}-{len(self.screenshots)}.png"
         screenshot_path = f"{self.run_dir}/screenshots/{screenshot_filename}"
         page.screenshot(path=screenshot_path)
         
@@ -414,6 +416,7 @@ class ReportGenerator:
             for screenshot in result.screenshots:
                 screenshot_html = SCREENSHOT_TEMPLATE.replace("{{path}}", screenshot["path"])
                 screenshot_html = screenshot_html.replace("{{name}}", screenshot["name"])
+                screenshot_html = screenshot_html.replace("{{test_name}}", result.name)
                 screenshots_html += screenshot_html
             
             # 生成错误部分HTML

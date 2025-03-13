@@ -21,7 +21,7 @@ def test_send_message(conversation_page: ConversationPage):
         LOGGER.info("Starting test_send_message")
         
         # 截图以便调试
-        test_result.add_screenshot("test-start", conversation_page.page)
+        test_result.add_screenshot("initial-page-state", conversation_page.page)
         LOGGER.debug("Took initial screenshot")
         
         # Create conversation
@@ -46,7 +46,7 @@ def test_send_message(conversation_page: ConversationPage):
         assert response, "Response should not be empty"
         
         # 截图以便调试
-        test_result.add_screenshot("after-response", conversation_page.page)
+        test_result.add_screenshot("after-message-response", conversation_page.page)
         
         LOGGER.info("Test completed successfully!")
         test_result.mark_passed()

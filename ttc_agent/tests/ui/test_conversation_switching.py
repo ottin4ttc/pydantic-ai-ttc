@@ -22,7 +22,7 @@ def test_conversation_switching(conversation_page: ConversationPage):
         LOGGER.info("Starting test_conversation_switching")
         
         # 截图以便调试
-        test_result.add_screenshot("test-start", conversation_page.page)
+        test_result.add_screenshot("initial-page-state", conversation_page.page)
         
         # First conversation
         LOGGER.info("Step 1: Creating first conversation")
@@ -56,7 +56,7 @@ def test_conversation_switching(conversation_page: ConversationPage):
         assert current_id == conv1_id, f"Expected current conversation to be {conv1_id}, got {current_id}"
         
         # 截图以便调试
-        test_result.add_screenshot("final-state", conversation_page.page)
+        test_result.add_screenshot("switched-back-to-first-conversation", conversation_page.page)
         
         LOGGER.info("Test completed successfully!")
         test_result.mark_passed()
