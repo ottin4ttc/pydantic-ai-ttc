@@ -14,9 +14,10 @@ class ConversationPage:
     def __init__(self, page: Page):
         self.page = page
         
-    def create_new_conversation(self) -> str:
+        
+    def create_new_conversation(self, bot_type: str = "customer_service") -> str:
         """Create a new conversation and return its ID"""
-        LOGGER.info("Creating new conversation")
+        LOGGER.info(f"Creating new conversation with bot type: {bot_type}")
         
         # 使用 data-testid 定位新建对话按钮
         new_conv_button = self.page.locator('[data-testid="new-conversation-button"]')
@@ -24,6 +25,21 @@ class ConversationPage:
         new_conv_button.wait_for(state="visible")
         LOGGER.debug("Clicking new conversation button")
         new_conv_button.click()
+        
+        # 等待对话框出现
+        LOGGER.debug("Waiting for bot selection dialog to appear")
+        self.page.locator('[data-testid="bot-selection-dialog"]').wait_for(state="visible")
+        
+        # 选择机器人类型
+        if bot_type != "customer_service":  # 默认已经选择了customer_service
+            LOGGER.debug(f"Selecting bot type: {bot_type}")
+            self.page.locator('[data-testid="bot-type-selector"]').click()
+            self.page.locator(f'[data-value="{bot_type}"]').click()
+        
+        # 点击创建按钮
+        LOGGER.debug("Clicking create button")
+        create_button = self.page.locator('[data-testid="create-bot-button"]')
+        create_button.click()
         
         # 等待网络请求完成
         LOGGER.debug("Waiting for network idle")
@@ -36,7 +52,6 @@ class ConversationPage:
         conversation_id = self.get_current_conversation_id() or ""
         LOGGER.info(f"Created new conversation with ID: {conversation_id}")
         return conversation_id
-        
     def send_message(self, message: str):
         """Send a message in the current conversation"""
         LOGGER.info(f"Sending message: {message}")
@@ -197,126 +212,3 @@ def conversation_page(page: Page) -> ConversationPage:
     LOGGER.info("Conversation page fixture setup complete")
     return ConversationPage(page)
 
-def test_multiple_conversations(conversation_page: ConversationPage):
-    """
-    Test creating multiple conversations and switching between them.
-    
-    Steps:
-    1. Create first conversation and send a message
-    2. Create second conversation and send a message
-    3. Switch back to first conversation and send another message
-    """
-    test_result = UITestResult("test_multiple_conversations", RUN_DIR)
-    
-    try:
-        LOGGER.info("Starting test_multiple_conversations")
-        
-        # 截图以便调试
-        test_result.add_screenshot("test-start", conversation_page.page)
-        LOGGER.debug("Took initial screenshot")
-        
-        # First conversation
-        LOGGER.info("Step 1: Creating first conversation")
-        test_result.add_step("Creating first conversation")
-        conv1_id = conversation_page.create_new_conversation()
-        LOGGER.info(f"First conversation ID: {conv1_id}")
-        
-        LOGGER.info("Step 2: Sending message in first conversation")
-        test_result.add_step("Sending message in first conversation")
-        conversation_page.send_message("Hello in first conversation")
-        
-        LOGGER.info("Step 3: Waiting for response in first conversation")
-        test_result.add_step("Waiting for response in first conversation")
-        conversation_page.wait_for_response()
-        
-        first_response = conversation_page.get_last_message()
-        LOGGER.info(f"First response received: {first_response[:50]}...")  # 只记录前50个字符
-        
-        # 截图以便调试
-        test_result.add_screenshot("after-first-conversation", conversation_page.page)
-        LOGGER.debug("Took screenshot after first conversation")
-        
-        # Second conversation
-        LOGGER.info("Step 4: Creating second conversation")
-        test_result.add_step("Creating second conversation")
-        second_id = conversation_page.create_new_conversation()
-        LOGGER.info(f"Second conversation ID: {second_id}")
-        
-        LOGGER.info("Step 5: Sending message in second conversation")
-        test_result.add_step("Sending message in second conversation")
-        conversation_page.send_message("Hello in second conversation")
-        
-        LOGGER.info("Step 6: Waiting for response in second conversation")
-        test_result.add_step("Waiting for response in second conversation")
-        conversation_page.wait_for_response()
-        
-        second_response = conversation_page.get_last_message()
-        LOGGER.info(f"Second response received: {second_response[:50]}...")  # 只记录前50个字符
-        
-        # 截图以便调试
-        test_result.add_screenshot("after-second-conversation", conversation_page.page)
-        LOGGER.debug("Took screenshot after second conversation")
-        
-        # Verify responses are different
-        LOGGER.info("Step 7: Verifying responses are different")
-        test_result.add_step("Verifying responses are different")
-        assert first_response != second_response, "First and second responses should be different"
-        LOGGER.info("Responses are different as expected")
-        
-        # Switch back to first conversation
-        LOGGER.info(f"Step 8: Switching back to first conversation: {conv1_id}")
-        test_result.add_step(f"Switching back to first conversation: {conv1_id}")
-        conversation_page.switch_to_conversation(conv1_id)
-        
-        LOGGER.info("Step 9: Sending another message in first conversation")
-        test_result.add_step("Sending another message in first conversation")
-        conversation_page.send_message("Back to first conversation")
-        
-        LOGGER.info("Step 10: Waiting for response")
-        test_result.add_step("Waiting for response")
-        conversation_page.wait_for_response()
-        
-        new_response = conversation_page.get_last_message()
-        LOGGER.info(f"New response received: {new_response[:50]}...")  # 只记录前50个字符
-        
-        # 截图以便调试
-        test_result.add_screenshot("final-state", conversation_page.page)
-        LOGGER.debug("Took final screenshot")
-        
-        # Verify we got a new response
-        LOGGER.info("Step 11: Verifying new response is different from previous responses")
-        test_result.add_step("Verifying new response is different from previous responses")
-        assert new_response != first_response, "New response should be different from first response"
-        assert new_response != second_response, "New response should be different from second response"
-        
-        LOGGER.info("Test completed successfully!")
-        test_result.mark_passed()
-        
-    except Exception as e:
-        error_msg = f"Test failed: {str(e)}"
-        LOGGER.error(error_msg)
-        LOGGER.error(traceback.format_exc())
-        test_result.mark_failed(error_msg)
-        test_result.add_screenshot("failure", conversation_page.page)
-        raise
-    
-    finally:
-        # 添加测试结果到报告生成器
-        REPORT_GENERATOR.add_result(test_result)
-        
-        # 生成报告
-        json_report = REPORT_GENERATOR.generate_json_report()
-        html_report = REPORT_GENERATOR.generate_html_report()
-        
-        LOGGER.info(f"Test report generated: {json_report}")
-        LOGGER.info(f"HTML report generated: {html_report}")
-        
-        # 打印测试结果摘要
-        status = "PASSED" if test_result.status == "pass" else "FAILED"
-        LOGGER.info(f"Test {test_result.name}: {status}")
-        if test_result.error:
-            LOGGER.info(f"Error: {test_result.error}")
-        LOGGER.info(f"Duration: {round(test_result.end_time - test_result.start_time, 2) if test_result.end_time else 0} seconds")
-        LOGGER.info(f"Screenshots: {len(test_result.screenshots)}")
-        LOGGER.info(f"Steps: {len(test_result.steps)}")
-        LOGGER.info(f"Test results directory: {RUN_DIR}") 

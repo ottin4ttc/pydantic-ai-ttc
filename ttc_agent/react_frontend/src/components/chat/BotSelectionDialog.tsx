@@ -98,9 +98,9 @@ const BotSelectionDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} data-testid="bot-selection-dialog">
       <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} data-testid="bot-selection-form">
           <DialogHeader>
             <DialogTitle>创建新对话</DialogTitle>
             <DialogDescription>
@@ -116,6 +116,7 @@ const BotSelectionDialog = ({
               <Select
                 value={selectedBotType}
                 onValueChange={handleBotTypeChange}
+                data-testid="bot-type-selector"
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="选择Bot类型" />
@@ -163,7 +164,7 @@ const BotSelectionDialog = ({
           </div>
           
           <DialogFooter>
-            <Button type="submit">创建</Button>
+            <Button type="submit" data-testid="create-bot-button">创建</Button>
           </DialogFooter>
         </form>
       </DialogContent>
