@@ -406,6 +406,55 @@ class Database:
             )
             con.commit()
         
+        # 检查机器人表是否存在
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='bots'")
+        bots_table_exists = cur.fetchone() is not None
+        
+        if not bots_table_exists:
+            # 创建机器人表
+            print("Creating bots table")
+            cur.execute(
+                '''
+                CREATE TABLE IF NOT EXISTS bots (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    role_type TEXT NOT NULL,
+                    system_prompt TEXT NOT NULL,
+                    is_default BOOLEAN DEFAULT 0,
+                    created_at TEXT,
+                    updated_at TEXT
+                );
+                '''
+            )
+            
+            # Insert default bot
+            now = datetime.now().isoformat()
+            cur.execute(
+                '''
+                INSERT INTO bots (id, name, role_type, system_prompt, is_default, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''',
+                (str(uuid.uuid4()), "小麦", "ttc_assistant", 
+                 """You are 小麦 (Xiaomai), TTC's dedicated AI assistant. Your role is to help both TTC employees and customers:
+
+For TTC Employees:
+- Assist with internal processes and workflows
+- Provide guidance on company policies and procedures
+- Help with technical documentation and resources
+- Support project management and team collaboration
+
+For TTC Customers:
+- Provide professional and friendly customer service
+- Explain TTC's products and services clearly
+- Help troubleshoot technical issues
+- Guide users through setup and configuration
+- Answer questions about pricing and features
+
+Always maintain a helpful, professional, and friendly tone. Communicate clearly in both English and Chinese as needed. When unsure, ask for clarification to provide the most accurate assistance.""",
+                 1, now, now)
+            )
+            con.commit()
+        
         return con
 
     async def add_messages(self, messages: bytes, conversation_id: str = "default"):
@@ -467,4 +516,4 @@ if __name__ == '__main__':
 
     uvicorn.run(
         'ttc_agent.chat_app:app', reload=True, reload_dirs=[str(THIS_DIR)]
-    )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+    )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
