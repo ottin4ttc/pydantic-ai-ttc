@@ -19,3 +19,4 @@ examples/pydantic_ai_examples/.chat_app_messages.sqlite
 ttc_agent/.chat_app_messages.sqlite
 .env
 venv/
+test_results/

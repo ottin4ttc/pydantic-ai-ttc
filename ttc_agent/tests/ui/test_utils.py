@@ -3,6 +3,7 @@ import time
 import logging
 import json
 import datetime
+import shutil
 from typing import Dict, Any, List, Optional
 from playwright.sync_api import Page
 
@@ -261,6 +262,7 @@ def create_test_run_dir() -> str:
     os.makedirs(f"{run_dir}/screenshots", exist_ok=True)
     os.makedirs(f"{run_dir}/logs", exist_ok=True)
     os.makedirs(f"{run_dir}/reports", exist_ok=True)
+    os.makedirs(f"{run_dir}/reports/assets", exist_ok=True)  # 为报告添加资源目录
     
     return run_dir
 
@@ -317,16 +319,29 @@ class UITestResult:
     
     def add_screenshot(self, name: str, page: Page) -> str:
         """添加截图"""
-        filename = f"{self.run_dir}/screenshots/{name}-{len(self.screenshots)}.png"
-        page.screenshot(path=filename)
+        # 在screenshots目录中保存原始截图
+        screenshot_filename = f"{name}-{len(self.screenshots)}.png"
+        screenshot_path = f"{self.run_dir}/screenshots/{screenshot_filename}"
+        page.screenshot(path=screenshot_path)
         
-        # 存储相对路径，用于报告
-        rel_path = os.path.relpath(filename, self.run_dir)
+        # 同时在reports/assets目录中保存一份副本，用于HTML报告
+        assets_dir = f"{self.run_dir}/reports/assets"
+        assets_path = f"{assets_dir}/{screenshot_filename}"
+        
+        # 确保assets目录存在
+        os.makedirs(assets_dir, exist_ok=True)
+        
+        # 复制截图到assets目录
+        shutil.copy2(screenshot_path, assets_path)
+        
+        # 存储相对于reports目录的路径，用于HTML报告
+        rel_path = f"assets/{screenshot_filename}"
         self.screenshots.append({
             "name": name,
-            "path": rel_path
+            "path": rel_path,
+            "full_path": screenshot_path  # 保存完整路径，用于其他用途
         })
-        return filename
+        return screenshot_path
     
     def mark_passed(self) -> None:
         """标记测试为通过"""
@@ -427,8 +442,20 @@ class ReportGenerator:
         html_report = html_report.replace("{{test_cases}}", test_cases_html)
         html_report = html_report.replace("{{run_dir}}", self.run_dir)
         
+        # 创建包含时间戳、测试结果摘要和测试用例数量的报告文件名
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        status_summary = "PASS" if failed == 0 else f"FAIL_{failed}"
+        report_filename = f"report_{timestamp}_{status_summary}_{total}cases.html"
+        
+        # 同时保存一个固定名称的报告（用于脚本引用）和一个详细命名的报告（用于存档）
         report_path = f"{self.run_dir}/reports/report.html"
+        detailed_report_path = f"{self.run_dir}/reports/{report_filename}"
+        
         with open(report_path, 'w') as f:
             f.write(html_report)
         
-        return report_path 
+        # 复制一份带有详细命名的报告
+        with open(detailed_report_path, 'w') as f:
+            f.write(html_report)
+        
+        return detailed_report_path 

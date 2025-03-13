@@ -7,6 +7,7 @@
 - **详细日志记录**：每次测试运行都会生成详细的日志，记录测试的每一步操作和结果
 - **截图捕获**：在测试的关键步骤和错误发生时自动捕获截图
 - **HTML报告**：生成美观的HTML报告，包含测试结果、步骤、截图和错误信息
+- **智能报告命名**：报告文件名包含时间戳、测试结果摘要和测试用例数量，便于快速识别
 - **独立测试运行目录**：每次测试运行都会创建一个独立的目录，包含所有相关的日志、截图和报告
 - **页面对象模式**：使用页面对象模式组织测试代码，提高可维护性和可读性
 
@@ -28,9 +29,15 @@ test_results/
     ├── logs/             # 日志文件
     │   └── test.log      # 详细日志
     ├── reports/          # 测试报告
-    │   ├── report.html   # HTML格式报告
-    │   └── report.json   # JSON格式报告
-    └── screenshots/      # 测试过程中的截图
+    │   ├── assets/       # 报告资源文件（截图副本）
+    │   │   ├── page-loaded-0.png
+    │   │   ├── test-start-0.png
+    │   │   └── ...
+    │   ├── report.html                                # 固定名称的HTML报告（最新结果）
+    │   ├── report_YYYYMMDD_HHMMSS_PASS_10cases.html   # 带时间戳和结果摘要的HTML报告（通过示例）
+    │   ├── report_YYYYMMDD_HHMMSS_FAIL_2_10cases.html # 带时间戳和结果摘要的HTML报告（失败示例）
+    │   └── report.json                                # JSON格式报告
+    └── screenshots/      # 原始截图
         ├── page-loaded-0.png
         ├── test-start-0.png
         └── ...
@@ -69,6 +76,34 @@ deactivate
 ```
 
 > **注意**：必须使用 `python -m pytest` 而不是直接使用 `pytest` 命令，以确保Python正确识别包结构。
+
+## 查看测试报告
+
+测试完成后，HTML报告将生成在`test_results/run_YYYYMMDD_HHMMSS/reports/`目录下，有两种格式：
+
+1. **固定名称报告**：`report.html` - 始终是最新的测试结果，便于脚本引用
+2. **详细命名报告**：`report_YYYYMMDD_HHMMSS_STATUS_Ncases.html` - 包含以下信息：
+   - **时间戳**：测试执行的日期和时间（YYYYMMDD_HHMMSS格式）
+   - **测试状态**：
+     - `PASS` - 所有测试都通过
+     - `FAIL_X` - 有X个测试失败
+   - **测试用例数量**：`Ncases` - 表示执行的测试用例总数
+
+例如：
+- `report_20230615_143022_PASS_10cases.html` - 2023年6月15日14:30:22执行，所有10个测试用例都通过
+- `report_20230616_091545_FAIL_2_8cases.html` - 2023年6月16日09:15:45执行，8个测试用例中有2个失败
+
+这种命名方式使您可以快速识别测试运行的时间和结果，无需打开报告文件即可了解测试状态。
+
+您可以在浏览器中打开HTML报告查看详细的测试结果，包括：
+
+- 测试摘要（通过/失败/总数）
+- 每个测试的详细信息（名称、状态、持续时间）
+- 测试步骤列表
+- 测试过程中捕获的截图
+- 错误信息（如果测试失败）
+
+报告中的截图是从原始截图复制到`reports/assets`目录的副本，确保HTML报告可以正确显示它们。
 
 ## 编写新的UI测试
 
@@ -179,7 +214,7 @@ generator.add_result(test_result)
 json_path = generator.generate_json_report()
 
 # 生成HTML报告
-html_path = generator.generate_html_report()
+html_path = generator.generate_html_report()  # 返回详细命名的报告路径
 ```
 
 ## 最佳实践
@@ -190,6 +225,7 @@ html_path = generator.generate_html_report()
 4. **使用页面对象模式**：将页面操作封装在页面对象类中，提高代码可维护性
 5. **适当等待**：使用显式等待而不是固定延时，提高测试稳定性
 6. **错误处理**：使用try/except/finally结构处理错误并确保生成报告
+7. **保留历史报告**：利用详细命名的报告文件进行测试历史追踪和比较
 
 ## 故障排除
 
@@ -210,4 +246,12 @@ html_path = generator.generate_html_report()
    - 确保所有目录都有`__init__.py`文件
 
 3. **测试结果目录不存在**：
-   - 确保`create_test_run_dir()`函数使用绝对路径创建目录 
+   - 确保`create_test_run_dir()`函数使用绝对路径创建目录
+
+4. **HTML报告中看不到截图**：
+   - 截图会自动复制到`reports/assets`目录，确保HTML报告可以正确显示它们
+   - 如果仍然看不到截图，检查浏览器控制台是否有路径错误 
+
+5. **无法区分不同的测试运行**：
+   - 现在报告文件名包含时间戳、测试结果摘要和测试用例数量，便于快速识别不同的测试运行
+   - 可以通过文件名快速了解测试状态，无需打开报告文件
