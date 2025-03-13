@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -7,37 +7,22 @@ import {
   DialogDescription,
   DialogFooter
 } from '../ui/dialog';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '../ui/select';
-import { Input } from '../ui/input';
-import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
-import { Label } from '../ui/label';
-
-
-
+import { Badge } from '../ui/badge';
 import { BotService } from '../../services';
 import { Bot } from '../../types/chat';
 import { useToast } from '../../hooks/use-toast';
-import { Badge } from '../ui/badge';
 
 interface BotSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreateBot: (roleType: string, botName: string, botId?: string) => void;
-  currentBotType?: string;
 }
 
 const BotSelectionDialog = ({ 
   open, 
   onOpenChange, 
-  onCreateBot,
-  currentBotType
+  onCreateBot
 }: BotSelectionDialogProps) => {
   const [selectedBot, setSelectedBot] = useState<Bot | null>(null);
   const [bots, setBots] = useState<Bot[]>([]);
