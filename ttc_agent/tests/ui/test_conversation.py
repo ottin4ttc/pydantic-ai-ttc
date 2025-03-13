@@ -9,13 +9,8 @@ class ConversationPage:
         
     def create_new_conversation(self) -> str:
         """Create a new conversation and return its ID"""
-        # 查找包含"新对话"文本的按钮
-        new_conv_button = self.page.get_by_role("button").filter(has_text="新对话")
-        if new_conv_button.count() == 0:
-            # 尝试英文按钮
-            new_conv_button = self.page.get_by_role("button").filter(has_text="New")
-        
-        # 确保按钮可见并可点击
+        # 使用 data-testid 定位新建对话按钮
+        new_conv_button = self.page.locator('[data-testid="new-conversation-button"]')
         new_conv_button.wait_for(state="visible")
         new_conv_button.click()
         
@@ -24,47 +19,44 @@ class ConversationPage:
         # 等待一小段时间确保UI更新
         time.sleep(1)
         
-        # 返回当前对话ID（如果能找到）
+        # 获取当前对话ID
         return self.get_current_conversation_id() or ""
         
     def send_message(self, message: str):
         """Send a message in the current conversation"""
-        # 查找输入框
-        input_box = self.page.get_by_role("textbox")
+        # 使用 data-testid 定位消息输入框
+        input_box = self.page.locator('[data-testid="message-input"]')
         input_box.wait_for(state="visible")
         input_box.fill(message)
         
-        # 查找发送按钮
-        send_button = self.page.get_by_role("button").filter(has_text="Send")
-        if send_button.count() == 0:
-            # 尝试查找包含发送图标的按钮
-            send_button = self.page.locator('button[type="submit"]')
-        
+        # 使用 data-testid 定位发送按钮
+        send_button = self.page.locator('[data-testid="send-button"]')
         send_button.wait_for(state="visible")
         send_button.click()
         
         # 等待消息发送
         self.page.wait_for_load_state("networkidle")
         
-    def wait_for_response(self, timeout=60000):
+    def wait_for_response(self, timeout: int = 60000):
         """Wait for and verify the assistant's response"""
         try:
-            # 等待页面上出现新消息
-            start_time = time.time()
-            while time.time() - start_time < timeout / 1000:
-                # 检查是否有新消息出现
-                messages = self.page.locator('.bg-muted, .message, .assistant-message')
-                if messages.count() > 0:
-                    # 找到消息后等待网络请求完成
-                    self.page.wait_for_load_state("networkidle")
-                    time.sleep(1)  # 额外等待以确保响应完全加载
-                    return
-                time.sleep(0.5)  # 短暂等待后再次检查
-                
-            # 如果超时，截图并抛出异常
-            self.page.screenshot(path="timeout-waiting-for-response.png")
-            raise TimeoutError("Timed out waiting for assistant response")
-                
+            # 等待加载指示器出现
+            loading = self.page.locator('[data-testid="loading-indicator"]')
+            if loading.count() > 0:
+                # 如果加载指示器出现，等待它消失
+                loading.wait_for(state="hidden", timeout=timeout)
+            
+            # 等待消息内容出现
+            self.page.locator('[data-testid="message-content"]').last.wait_for(
+                state="visible", 
+                timeout=timeout
+            )
+            
+            # 等待网络请求完成
+            self.page.wait_for_load_state("networkidle")
+            
+            # 额外等待以确保响应完全加载
+            time.sleep(1)
         except Exception as e:
             print(f"Error waiting for response: {e}")
             # 捕获当前页面截图以便调试
@@ -78,32 +70,28 @@ class ConversationPage:
             return
             
         try:
-            # 尝试查找对话列表中的项目
-            conversations = self.page.locator('.conversation, [role="button"]').all()
-            for conv in conversations:
-                # 点击第一个非活跃的对话
-                if "active" not in (conv.get_attribute("class") or ""):
-                    conv.click()
-                    break
-                    
+            # 使用 data-testid 定位特定对话
+            conv_selector = f'[data-testid="conversation-{conversation_id}"]'
+            self.page.locator(conv_selector).wait_for(state="visible")
+            self.page.locator(conv_selector).click()
+            
             # 等待网络请求完成
             self.page.wait_for_load_state("networkidle")
         except Exception as e:
-            print(f"Error switching conversation: {e}")
+            print(f"Error switching to conversation {conversation_id}: {e}")
             # 捕获当前页面截图以便调试
-            self.page.screenshot(path="switch-error.png")
+            self.page.screenshot(path=f"switch-error-{conversation_id}.png")
             raise
         
     def get_current_conversation_id(self) -> str:
         """Get the ID of the current conversation"""
         try:
-            # 尝试查找活跃的对话
-            active_conv = self.page.locator('.conversation.active, [data-is-current="true"]')
-            if active_conv.count() > 0:
-                return active_conv.get_attribute("data-conversation-id") or ""
-                
-            # 如果找不到，返回空字符串
-            return ""
+            # 使用 data-is-current 属性找到当前活跃的对话
+            current_conv = self.page.locator('[data-is-current="true"]')
+            if current_conv.count() == 0:
+                print("Warning: No active conversation found")
+                return ""
+            return current_conv.get_attribute("data-conversation-id") or ""
         except Exception as e:
             print(f"Error getting current conversation ID: {e}")
             return ""
@@ -111,13 +99,11 @@ class ConversationPage:
     def get_last_message(self) -> str:
         """Get the text of the last message in the conversation"""
         try:
-            # 查找所有消息元素
-            messages = self.page.locator('.message, .bg-muted')
+            # 使用 data-testid 定位消息文本
+            messages = self.page.locator('[data-testid="message-text"]')
             if messages.count() == 0:
                 print("Warning: No messages found")
                 return ""
-                
-            # 获取最后一条消息的文本
             last_message = messages.last
             return last_message.text_content() or ""
         except Exception as e:
@@ -137,8 +123,8 @@ def conversation_page(page: Page) -> ConversationPage:
     page.wait_for_load_state("domcontentloaded")
     page.wait_for_load_state("networkidle")
     
-    # 等待页面上出现任何内容
-    page.wait_for_selector('body > *')
+    # 等待聊天容器出现
+    page.wait_for_selector('[data-testid="chat-container"]', state="visible")
     
     # 截图以便调试
     page.screenshot(path="page-loaded.png")
