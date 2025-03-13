@@ -22,7 +22,7 @@ from typing import Annotated, Any, Callable, Literal, TypeVar
 
 import fastapi
 import logfire
-from fastapi import Depends, Request
+from fastapi import Depends, Request, HTTPException
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic_ai.models.openai import OpenAIModel
@@ -73,6 +73,33 @@ THIS_DIR = Path(__file__).parent
 @asynccontextmanager
 async def lifespan(_app: fastapi.FastAPI):
     async with Database.connect() as db:
+        # Initialize bot service and ensure default bot exists
+        from .bot import BotService
+        bot_service = BotService(db)
+        default_bot = await bot_service.get_default_bot()
+        if default_bot is None:
+            print("Creating default bot '小麦'...")
+            await bot_service.create_bot(
+                "小麦", 
+                "ttc_assistant",
+                """You are 小麦 (Xiaomai), TTC's dedicated AI assistant. Your role is to help both TTC employees and customers:
+
+For TTC Employees:
+- Assist with internal processes and workflows
+- Provide guidance on company policies and procedures
+- Help with technical documentation and resources
+- Support project management and team collaboration
+
+For TTC Customers:
+- Provide professional and friendly customer service
+- Explain TTC's products and services clearly
+- Help troubleshoot technical issues
+- Guide users through setup and configuration
+- Answer questions about pricing and features
+
+Always maintain a helpful, professional, and friendly tone. Communicate clearly in both English and Chinese as needed. When unsure, ask for clarification to provide the most accurate assistance.""",
+                True
+            )
         yield {'db': db}
 
 
@@ -98,6 +125,14 @@ app.include_router(api_router, prefix="/api")
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=THIS_DIR / "static"), name="static")
+
+# Add dependency to inject database into requests
+@app.middleware("http")
+async def add_db_to_request(request: Request, call_next):
+    async with Database.connect() as db:
+        request.state.db = db
+        response = await call_next(request)
+    return response
 
 
 @app.get('/')
@@ -270,8 +305,12 @@ async def get_conversation(conversation_id: str) -> ConversationDict:
     }
 
 # 将通配符路由移到最后，确保所有 API 路由先匹配
-@app.get('/{path:path}')
+@app.get('/{path:path}', include_in_schema=False)
 async def serve_react(path: str):
+    # Skip API routes
+    if path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="API route not found")
+    
     static_dir = THIS_DIR / "static"
     if path and (static_dir / path).exists():
         return FileResponse(static_dir / path)
@@ -428,4 +467,4 @@ if __name__ == '__main__':
 
     uvicorn.run(
         'ttc_agent.chat_app:app', reload=True, reload_dirs=[str(THIS_DIR)]
-    )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+    )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
