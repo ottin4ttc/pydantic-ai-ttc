@@ -2,6 +2,7 @@ export interface ChatMessage {
   role: string;
   content: string;
   timestamp?: string;
+  id?: string; // Add id property
 }
 
 export interface Conversation {

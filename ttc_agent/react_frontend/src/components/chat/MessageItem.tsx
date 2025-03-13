@@ -11,10 +11,11 @@ interface MessageItemProps {
 const MessageItem = ({ message }: MessageItemProps) => {
   const { role, content, timestamp } = message;
   const isUser = role === 'user';
-  const formattedTime = new Date(timestamp).toLocaleTimeString([], { 
+  const messageId = message.id || `${role}-${timestamp}`;
+  const formattedTime = timestamp ? new Date(timestamp).toLocaleTimeString([], { 
     hour: '2-digit', 
     minute: '2-digit' 
-  });
+  }) : '';
   
   return (
     <div 
@@ -22,9 +23,9 @@ const MessageItem = ({ message }: MessageItemProps) => {
         "flex gap-3 mb-4",
         isUser ? "justify-end" : "justify-start"
       )}
-      data-testid={`message-${message.id}`}
+      data-testid={`message-${messageId}`}
       data-message-role={role}
-      data-message-id={message.id}
+      data-message-id={messageId}
     >
       {!isUser && (
         <Avatar className="h-8 w-8 bg-primary/20" data-testid="assistant-avatar">

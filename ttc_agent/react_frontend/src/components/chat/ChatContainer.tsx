@@ -4,7 +4,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Send, AlertCircle } from 'lucide-react';
+import { Send, AlertCircle, ArrowDown } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/alert';
 import { useToast } from '../../hooks/use-toast';
 import MessageItem from './MessageItem';
@@ -23,7 +23,10 @@ const ChatContainer = () => {
   const [error, setError] = useState<string | null>(null);
   const [isBotDialogOpen, setIsBotDialogOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const messageEndRef = useRef<HTMLDivElement>(null);
   const sentMessageRef = useRef<string | null>(null);
+  const [isUserScrolled, setIsUserScrolled] = useState(false);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
   const { toast } = useToast();
   
   // Fetch conversations on component mount
@@ -80,10 +83,31 @@ const ChatContainer = () => {
   
   // Scroll to bottom when messages change
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    if (scrollAreaRef.current && !isUserScrolled) {
+      messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } else if (isUserScrolled) {
+      setHasNewMessages(true);
     }
-  }, [messages]);
+  }, [messages, isUserScrolled]);
+  
+  // Handle scroll events to detect user scroll position
+  const handleScroll = () => {
+    if (scrollAreaRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current;
+      const isScrolledToBottom = scrollHeight - scrollTop - clientHeight < 20;
+      setIsUserScrolled(!isScrolledToBottom);
+      
+      if (isScrolledToBottom) {
+        setHasNewMessages(false);
+      }
+    }
+  };
+  
+  // Scroll to bottom function
+  const scrollToBottom = () => {
+    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setHasNewMessages(false);
+  };
   
   const handleNewConversation = () => {
     // Open the bot selection dialog instead of creating a conversation directly
@@ -226,7 +250,12 @@ const ChatContainer = () => {
           </Alert>
         )}
         
-        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef} data-testid="messages-scroll-area">
+        <ScrollArea 
+          className="flex-1 p-4" 
+          ref={scrollAreaRef} 
+          data-testid="messages-scroll-area"
+          onScroll={handleScroll}
+        >
           {messages.length === 0 && !isLoading ? (
             <div className="text-center text-muted-foreground py-8" data-testid="empty-messages">
               No messages yet. Start a conversation!
@@ -247,6 +276,20 @@ const ChatContainer = () => {
                 <div className="h-4 bg-muted-foreground/20 rounded w-1/2"></div>
               </div>
             </div>
+          )}
+          
+          {/* Add a div at the end for scrolling to the bottom */}
+          <div ref={messageEndRef} data-testid="message-end" />
+          
+          {/* Add a scroll to bottom button when needed */}
+          {isUserScrolled && hasNewMessages && (
+            <button
+              onClick={scrollToBottom}
+              className="fixed bottom-20 right-8 bg-primary text-primary-foreground rounded-full p-2 shadow-md"
+              data-testid="scroll-to-bottom"
+            >
+              <ArrowDown className="h-4 w-4" />
+            </button>
           )}
         </ScrollArea>
         
