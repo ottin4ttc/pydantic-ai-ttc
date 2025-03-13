@@ -221,6 +221,37 @@ cleanup() {
     echo "✓ Cleanup complete"
 }
 
+# 打开HTML报告
+open_html_report() {
+    local report_path=$1
+    
+    if [ -f "$report_path" ]; then
+        echo "Opening HTML report: $report_path"
+        
+        # 根据操作系统打开HTML报告
+        case "$(uname -s)" in
+            Darwin*)    # macOS
+                open "$report_path"
+                ;;
+            Linux*)     # Linux
+                if command -v xdg-open &> /dev/null; then
+                    xdg-open "$report_path"
+                else
+                    echo "Cannot open report automatically. Please open manually: $report_path"
+                fi
+                ;;
+            CYGWIN*|MINGW*|MSYS*)  # Windows
+                start "$report_path"
+                ;;
+            *)
+                echo "Cannot open report automatically. Please open manually: $report_path"
+                ;;
+        esac
+    else
+        echo "HTML report not found: $report_path"
+    fi
+}
+
 # 设置清理陷阱
 trap cleanup EXIT INT TERM
 
@@ -255,18 +286,52 @@ main() {
     # 运行测试
     if [ -d ".venv" ]; then
         source .venv/Scripts/activate
+        
+        # 运行测试并捕获输出
+        # 使用 -m 标志确保 Python 将目录视为包
         python -m pytest ttc_agent/tests/ui/test_conversation.py -v
         TEST_RESULT=$?
+        
+        # 查找最新的测试报告
+        if [ $TEST_RESULT -eq 0 ]; then
+            echo "✓ Tests completed successfully"
+        else
+            echo "❌ Tests failed"
+        fi
+        
+        # 查找最新的测试报告目录
+        LATEST_RUN=$(find test_results -type d -name "run_*" | sort -r | head -n 1 2>/dev/null)
+        
+        if [ -n "$LATEST_RUN" ]; then
+            HTML_REPORT="$LATEST_RUN/reports/report.html"
+            
+            echo "Test results directory: $LATEST_RUN"
+            
+            if [ -f "$HTML_REPORT" ]; then
+                echo "HTML report generated: $HTML_REPORT"
+                
+                # 询问用户是否要打开HTML报告
+                read -p "Do you want to open the HTML report? (y/n): " open_report
+                if [[ "$open_report" =~ ^[Yy]$ ]]; then
+                    open_html_report "$HTML_REPORT"
+                fi
+            else
+                echo "HTML report not found"
+            fi
+            
+            # 显示日志文件位置
+            echo "Log file: $LATEST_RUN/logs/test.log"
+            
+            # 显示截图目录
+            echo "Screenshots directory: $LATEST_RUN/screenshots"
+        else
+            echo "No test results directory found"
+        fi
+        
         deactivate
     else
         echo "❌ Virtual environment not found. Please create one with 'python -m venv .venv'"
         TEST_RESULT=1
-    fi
-    
-    if [ $TEST_RESULT -eq 0 ]; then
-        echo "✓ Tests completed successfully"
-    else
-        echo "❌ Tests failed"
     fi
     
     return $TEST_RESULT
