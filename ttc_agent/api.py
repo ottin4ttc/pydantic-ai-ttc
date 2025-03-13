@@ -236,4 +236,4 @@ async def generate_welcome_message(
     # Generate a welcome message
     response = await agent.process("Generate a brief welcome message for a new user.", "welcome")
     
-    return {"content": response.content}      
+    return {"content": response.content}                  
