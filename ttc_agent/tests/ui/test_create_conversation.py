@@ -33,25 +33,11 @@ def test_create_conversation(conversation_page: ConversationPage):
         cs_conv_id = conversation_page.create_new_conversation("customer_service")
         LOGGER.info(f"Customer service conversation ID: {cs_conv_id}")
         
-        # Create second conversation with technical support bot
-        LOGGER.info("Step 2: Creating technical support bot conversation")
-        test_result.add_step("Creating technical support bot conversation")
-        ts_conv_id = conversation_page.create_new_conversation("technical_support")
-        LOGGER.info(f"Technical support conversation ID: {ts_conv_id}")
-        
-        # Verify both conversations exist
-        LOGGER.info("Step 3: Verifying both conversations exist")
-        test_result.add_step("Verifying both conversations exist")
-        
-        # Check customer service conversation
-        conversation_page.switch_to_conversation(cs_conv_id)
+        # Verify the conversation exists
+        LOGGER.info("Step 2: Verifying customer service conversation exists")
+        test_result.add_step("Verifying customer service conversation exists")
         current_id = conversation_page.get_current_conversation_id()
         assert current_id == cs_conv_id, f"Expected current conversation to be {cs_conv_id}, got {current_id}"
-        
-        # Check technical support conversation
-        conversation_page.switch_to_conversation(ts_conv_id)
-        current_id = conversation_page.get_current_conversation_id()
-        assert current_id == ts_conv_id, f"Expected current conversation to be {ts_conv_id}, got {current_id}"
         
         # 截图以便调试
         test_result.add_screenshot("final-state", conversation_page.page)

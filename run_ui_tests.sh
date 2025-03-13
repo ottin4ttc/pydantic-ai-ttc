@@ -9,6 +9,12 @@ trap 'cd "$INITIAL_DIR"' EXIT
 # 进入脚本所在目录
 cd "$(dirname "$0")"
 
+# 加载环境变量
+if [ -f ".env" ]; then
+    echo "Loading environment variables from .env file"
+    export $(grep -v '^#' .env | xargs)
+fi
+
 # 检查环境变量
 check_env_vars() {
     echo "=== Checking environment variables ==="
@@ -81,42 +87,31 @@ check_dependencies() {
     fi
 }
 
-# 检查 Python 包依赖
-check_python_packages() {
-    echo "=== Checking Python packages ==="
+# 安装 Python 包依赖
+install_python_packages() {
+    echo "=== Installing Python packages ==="
     
-    # 检查虚拟环境
-    if [ ! -d ".venv" ]; then
-        echo "Creating virtual environment..."
-        python -m venv .venv
-    fi
-    
-    # 激活虚拟环境
-    source .venv/Scripts/activate
-    
-    # 检查 pyproject.toml 是否存在
-    if [ ! -f "pyproject.toml" ]; then
-        echo "❌ pyproject.toml not found"
-        deactivate
+    # 安装项目依赖
+    echo "Installing project dependencies..."
+    if ! pip install -e ".[uitest]"; then
+        echo "❌ Failed to install project dependencies"
         return 1
     fi
     
-    echo "Installing project in development mode..."
-    if ! pip install -e ".[uitest]"; then
-        echo "❌ Failed to install project dependencies"
-        deactivate
+    # 安装 python-dotenv
+    echo "Installing python-dotenv..."
+    if ! pip install python-dotenv; then
+        echo "❌ Failed to install python-dotenv"
         return 1
     fi
     
     echo "Installing playwright browsers..."
-    if ! playwright install; then
+    if ! python -m playwright install; then
         echo "❌ Failed to install playwright browsers"
-        deactivate
         return 1
     fi
     
     echo "✓ All Python dependencies installed successfully"
-    deactivate
     return 0
 }
 
@@ -221,37 +216,6 @@ cleanup() {
     echo "✓ Cleanup complete"
 }
 
-# 打开HTML报告
-open_html_report() {
-    local report_path=$1
-    
-    if [ -f "$report_path" ]; then
-        echo "Opening HTML report: $report_path"
-        
-        # 根据操作系统打开HTML报告
-        case "$(uname -s)" in
-            Darwin*)    # macOS
-                open "$report_path"
-                ;;
-            Linux*)     # Linux
-                if command -v xdg-open &> /dev/null; then
-                    xdg-open "$report_path"
-                else
-                    echo "Cannot open report automatically. Please open manually: $report_path"
-                fi
-                ;;
-            CYGWIN*|MINGW*|MSYS*)  # Windows
-                start "$report_path"
-                ;;
-            *)
-                echo "Cannot open report automatically. Please open manually: $report_path"
-                ;;
-        esac
-    else
-        echo "HTML report not found: $report_path"
-    fi
-}
-
 # 设置清理陷阱
 trap cleanup EXIT INT TERM
 
@@ -266,8 +230,8 @@ main() {
     # 检查依赖
     check_dependencies
     
-    # 检查 Python 包依赖
-    if ! check_python_packages; then
+    # 安装 Python 包依赖
+    if ! install_python_packages; then
         echo "❌ Failed to install Python packages"
         exit 1
     fi
@@ -284,54 +248,43 @@ main() {
     
     echo "=== Running UI tests ==="
     # 运行测试
-    if [ -d ".venv" ]; then
-        source .venv/Scripts/activate
-        
-        # 运行测试并捕获输出
-        # 使用 -m 标志确保 Python 将目录视为包
-        python -m pytest ttc_agent/tests/ui/test_conversation.py -v
-        TEST_RESULT=$?
-        
-        # 查找最新的测试报告
-        if [ $TEST_RESULT -eq 0 ]; then
-            echo "✓ Tests completed successfully"
-        else
-            echo "❌ Tests failed"
-        fi
-        
-        # 查找最新的测试报告目录
-        LATEST_RUN=$(find test_results -type d -name "run_*" | sort -r | head -n 1 2>/dev/null)
-        
-        if [ -n "$LATEST_RUN" ]; then
-            HTML_REPORT="$LATEST_RUN/reports/report.html"
-            
-            echo "Test results directory: $LATEST_RUN"
-            
-            if [ -f "$HTML_REPORT" ]; then
-                echo "HTML report generated: $HTML_REPORT"
-                echo "Note: Test results are stored in the 'test_results' directory (ignored by git)"
-                echo "If you need to save specific test results, please click them manually."
-            else
-                echo "HTML report not found"
-            fi
-            
-            # 显示日志文件位置
-            echo "Log file: $LATEST_RUN/logs/test.log"
-            
-            # 显示截图目录
-            echo "Screenshots directory: $LATEST_RUN/screenshots"
-        else
-            echo "No test results directory found"
-        fi
-        
-        deactivate
+    python -m pytest ttc_agent/tests/ui/test_send_message.py ttc_agent/tests/ui/test_create_conversation.py ttc_agent/tests/ui/test_conversation_switching.py -v
+    TEST_RESULT=$?
+    
+    # 查找最新的测试报告
+    if [ $TEST_RESULT -eq 0 ]; then
+        echo "✓ Tests completed successfully"
     else
-        echo "❌ Virtual environment not found. Please create one with 'python -m venv .venv'"
-        TEST_RESULT=1
+        echo "❌ Tests failed"
+    fi
+    
+    # 查找最新的测试报告目录
+    LATEST_RUN=$(find test_results -type d -name "run_*" | sort -r | head -n 1 2>/dev/null)
+    
+    if [ -n "$LATEST_RUN" ]; then
+        HTML_REPORT="$LATEST_RUN/reports/report.html"
+        
+        echo "Test results directory: $LATEST_RUN"
+        
+        if [ -f "$HTML_REPORT" ]; then
+            echo "HTML report generated: $HTML_REPORT"
+            echo "Note: Test results are stored in the 'test_results' directory (ignored by git)"
+            echo "If you need to save specific test results, please click them manually."
+        else
+            echo "HTML report not found"
+        fi
+        
+        # 显示日志文件位置
+        echo "Log file: $LATEST_RUN/logs/test.log"
+        
+        # 显示截图目录
+        echo "Screenshots directory: $LATEST_RUN/screenshots"
+    else
+        echo "No test results directory found"
     fi
     
     return $TEST_RESULT
 }
 
 # 运行主流程
-main 
+main
