@@ -38,10 +38,15 @@ const PREDEFINED_BOTS = [
   }
 ];
 
+import { BotService } from '../../services';
+import { Bot } from '../../types/chat';
+import { useToast } from '../../hooks/use-toast';
+import { Badge } from '../ui/badge';
+
 interface BotSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateBot: (roleType: string, botName: string) => void;
+  onCreateBot: (roleType: string, botName: string, botId?: string) => void;
   currentBotType?: string;
 }
 
@@ -49,52 +54,39 @@ const BotSelectionDialog = ({
   open, 
   onOpenChange, 
   onCreateBot,
-  currentBotType = 'customer_service'
+  currentBotType
 }: BotSelectionDialogProps) => {
-  const [selectedBotType, setSelectedBotType] = useState(currentBotType);
-  const [customBotName, setCustomBotName] = useState('');
-  const [customSystemPrompt, setCustomSystemPrompt] = useState('');
-  const [isCustomBot, setIsCustomBot] = useState(false);
+  const [selectedBot, setSelectedBot] = useState<Bot | null>(null);
+  const [bots, setBots] = useState<Bot[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  // Reset form when dialog opens
+  // Fetch bots when dialog opens
   useEffect(() => {
     if (open) {
-      setSelectedBotType(currentBotType);
-      setCustomBotName('');
-      setCustomSystemPrompt('');
-      setIsCustomBot(false);
+      fetchBots();
     }
-  }, [open, currentBotType]);
+  }, [open]);
 
-  // Handle bot type selection
-  const handleBotTypeChange = (value: string) => {
-    setSelectedBotType(value);
-    setIsCustomBot(value === 'custom');
-    
-    // If selecting a predefined bot, reset custom fields
-    if (value !== 'custom') {
-      const selectedBot = PREDEFINED_BOTS.find(bot => bot.role_type === value);
-      if (selectedBot) {
-        setCustomBotName(selectedBot.name);
-        setCustomSystemPrompt(selectedBot.system_prompt);
+  const fetchBots = async () => {
+    setLoading(true);
+    try {
+      const botsList = await BotService.getBots();
+      setBots(botsList);
+      // Select default bot if available
+      const defaultBot = botsList.find(bot => bot.is_default);
+      if (defaultBot) {
+        setSelectedBot(defaultBot);
       }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to fetch bots'
+      });
+    } finally {
+      setLoading(false);
     }
-  };
-
-  // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (isCustomBot && (!customBotName.trim() || !customSystemPrompt.trim())) {
-      // Show validation error
-      return;
-    }
-    
-    const botName = isCustomBot ? customBotName : 
-      PREDEFINED_BOTS.find(bot => bot.role_type === selectedBotType)?.name || 'Assistant';
-    
-    onCreateBot(selectedBotType, botName);
-    onOpenChange(false);
   };
 
   return (

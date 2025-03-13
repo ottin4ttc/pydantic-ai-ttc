@@ -12,6 +12,7 @@ import { ConversationList } from './ConversationList';
 import BotSelectionDialog from './BotSelectionDialog';
 import BotManagementDialog from './BotManagementDialog';
 import ChatService from '../../services/ChatService';
+import { BotService } from '../../services';
 import { ChatMessage, Conversation } from '../../types/chat';
 
 const ChatContainer = () => {
@@ -92,13 +93,25 @@ const ChatContainer = () => {
     setIsBotDialogOpen(true);
   };
   
-  const handleCreateBot = async (roleType: string, botName: string) => {
+  const handleCreateBot = async (roleType: string, botName: string, botId?: string) => {
     try {
       setIsLoading(true);
-      const newConversation = await ChatService.createConversation(roleType, botName);
+      const newConversation = await ChatService.createConversation(roleType, botName, botId);
       setConversations(prev => [newConversation, ...prev]);
       setCurrentConversationId(newConversation.id);
       setMessages([]);
+
+      // Generate welcome message if bot ID is provided
+      if (botId) {
+        const welcomeMessage = await BotService.generateWelcomeMessage(botId);
+        if (welcomeMessage) {
+          setMessages([{
+            role: 'assistant',
+            content: welcomeMessage,
+            timestamp: new Date().toISOString()
+          }]);
+        }
+      }
     } catch (error) {
       console.error('Failed to create conversation:', error);
       toast({

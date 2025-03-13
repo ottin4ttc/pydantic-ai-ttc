@@ -10,18 +10,19 @@ class ChatService {
     this.baseUrl = baseUrl;
   }
 
-  async createConversation(roleType: string = 'default', botName: string = 'Assistant'): Promise<Conversation> {
+  async createConversation(roleType: string = 'default', botName: string = 'Assistant', botId?: string): Promise<Conversation> {
     try {
-      // Send role_type and bot_name in the request body
-      console.log('Creating new conversation with bot:', botName);
-      const response = await fetch(`${this.baseUrl}/api/new_conversation`, {
+      // Send role_type, bot_name, and optional bot_id in the request body
+      console.log('Creating new conversation with bot:', botName, botId ? `(ID: ${botId})` : '');
+      const response = await fetch(`${this.baseUrl}/api/conversations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           role_type: roleType,
-          bot_name: botName
+          bot_name: botName,
+          bot_id: botId
         })
       });
 
