@@ -121,19 +121,19 @@ Always maintain a helpful, professional, and friendly tone. Communicate clearly 
         return con
 
     async def add_messages(self, messages: bytes):
-        await self._asyncify(
-            self._execute,
+        await self.asyncify(
+            self.execute,
             'INSERT INTO messages (message_list) VALUES (?);',
             messages,
             commit=True,
         )
-        await self._asyncify(self.con.commit)
+        await self.asyncify(self.con.commit)
 
     async def get_messages(self) -> list[ModelMessage]:
-        c = await self._asyncify(
-            self._execute, 'SELECT message_list FROM messages order by id'
+        c = await self.asyncify(
+            self.execute, 'SELECT message_list FROM messages order by id'
         )
-        rows = await self._asyncify(c.fetchall)
+        rows = await self.asyncify(c.fetchall)
         messages: list[ModelMessage] = []
         for row in rows:
             messages.extend(ModelMessagesTypeAdapter.validate_json(row[0]))
@@ -156,6 +156,9 @@ Always maintain a helpful, professional, and friendly tone. Communicate clearly 
             partial(func, **kwargs),
             *args,  # type: ignore
         )
+        
+    # Alias for backward compatibility
+    _asyncify = asyncify
 
 
 async def get_database(request: Any) -> Database:

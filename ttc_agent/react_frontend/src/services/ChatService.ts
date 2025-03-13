@@ -14,7 +14,7 @@ class ChatService {
     try {
       // Send role_type, bot_name, and optional bot_id in the request body
       console.log('Creating new conversation with bot:', botName, botId ? `(ID: ${botId})` : '');
-      const response = await fetch(`${this.baseUrl}/api/conversations`, {
+      const response = await fetch(`${this.baseUrl}/api/new_conversation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -39,7 +39,8 @@ class ChatService {
 
   async getConversations(): Promise<Conversation[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/conversations`);
+      // Use direct API endpoint for conversations
+      const response = await fetch(`${this.baseUrl}/api/chat/conversations`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch conversations: ${response.status}`);
@@ -54,7 +55,8 @@ class ChatService {
 
   async getConversation(id: string): Promise<Conversation | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/conversations/${id}`);
+      // Use direct API endpoint for conversation
+      const response = await fetch(`${this.baseUrl}/api/chat/conversation/${id}`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch conversation: ${response.status}`);

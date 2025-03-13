@@ -120,9 +120,9 @@ app.add_middleware(
 
 # Import and include routers
 from .direct_api import router as direct_router
-from .api import router as api_router
-app.include_router(direct_router, prefix="/api")  # Keep existing API prefix for compatibility
-app.include_router(api_router, prefix="/api")
+from .bot_api import router as bot_router
+app.include_router(direct_router, prefix="/api")  # Include direct router with /api prefix
+app.include_router(bot_router, prefix="/api")  # Include bot router with /api prefix
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=THIS_DIR / "static"), name="static")
@@ -134,6 +134,71 @@ async def add_db_to_request(request: Request, call_next):
         request.state.db = db
         response = await call_next(request)
     return response
+
+# Add API endpoints for conversations
+@app.get("/api/chat/conversations")
+async def get_conversations():
+    """Get all conversations"""
+    try:
+        async with Database.connect() as db:
+            # Query conversations from database
+            cursor = await db.asyncify(
+                db.execute, 'SELECT id, role_type, bot_name, created_at, updated_at FROM conversations'
+            )
+            rows = await db.asyncify(cursor.fetchall)
+            
+            # Convert to list of dictionaries
+            conversations = []
+            for row in rows:
+                conversations.append({
+                    "id": row[0],
+                    "role_type": row[1],
+                    "bot_name": row[2],
+                    "created_at": row[3],
+                    "updated_at": row[4]
+                })
+            return conversations
+    except Exception as e:
+        print(f"Error getting conversations: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
+
+@app.get("/api/chat/conversation/{conversation_id}")
+async def get_conversation(conversation_id: str):
+    """Get a conversation by ID"""
+    try:
+        async with Database.connect() as db:
+            # Query conversation from database
+            cursor = await db.asyncify(
+                db.execute, 
+                'SELECT id, role_type, bot_name, created_at, updated_at FROM conversations WHERE id = ?',
+                conversation_id
+            )
+            row = await db.asyncify(cursor.fetchone)
+            
+            if row:
+                return {
+                    "id": row[0],
+                    "role_type": row[1],
+                    "bot_name": row[2],
+                    "created_at": row[3],
+                    "updated_at": row[4]
+                }
+            else:
+                # Return a dummy conversation if not found
+                return {
+                    "id": conversation_id,
+                    "role_type": "default",
+                    "bot_name": "Assistant",
+                    "created_at": "2023-01-01T00:00:00",
+                    "updated_at": "2023-01-01T00:00:00"
+                }
+    except Exception as e:
+        print(f"Error getting conversation: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
 @app.get('/')
@@ -308,10 +373,11 @@ async def get_conversation(conversation_id: str) -> ConversationDict:
 # 将通配符路由移到最后，确保所有 API 路由先匹配
 @app.get('/{path:path}', include_in_schema=False)
 async def serve_react(path: str):
-    # Skip API routes
-    if path.startswith("api/"):
+    # Skip API routes - don't handle API routes here
+    if path.startswith("api"):
         raise HTTPException(status_code=404, detail="API route not found")
     
+    # Serve static files or default to index.html
     static_dir = THIS_DIR / "static"
     if path and (static_dir / path).exists():
         return FileResponse(static_dir / path)
@@ -517,4 +583,4 @@ if __name__ == '__main__':
 
     uvicorn.run(
         'ttc_agent.chat_app:app', reload=True, reload_dirs=[str(THIS_DIR)]
-    )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+    )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                

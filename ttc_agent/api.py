@@ -20,7 +20,7 @@ class ConversationCreate(BaseModel):
     bot_name: str = "Default Bot"
 
 # 创建路由
-router = APIRouter()
+router = APIRouter(prefix="/api")
 
 # 创建模型实例
 openai_model = OpenAIModel(
@@ -236,4 +236,4 @@ async def generate_welcome_message(
     # Generate a welcome message
     response = await agent.process("Generate a brief welcome message for a new user.", "welcome")
     
-    return {"content": response.content}                  
+    return {"content": response.content}                        

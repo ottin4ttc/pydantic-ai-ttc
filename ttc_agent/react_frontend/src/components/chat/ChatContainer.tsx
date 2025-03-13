@@ -223,7 +223,6 @@ const ChatContainer = () => {
         open={isBotDialogOpen}
         onOpenChange={setIsBotDialogOpen}
         onCreateBot={handleCreateBot}
-        currentBotType={conversations.find(c => c.id === currentConversationId)?.role_type}
       />
       
       <BotManagementDialog
