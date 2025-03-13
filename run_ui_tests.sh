@@ -309,12 +309,8 @@ main() {
             
             if [ -f "$HTML_REPORT" ]; then
                 echo "HTML report generated: $HTML_REPORT"
-                
-                # 询问用户是否要打开HTML报告
-                read -p "Do you want to open the HTML report? (y/n): " open_report
-                if [[ "$open_report" =~ ^[Yy]$ ]]; then
-                    open_html_report "$HTML_REPORT"
-                fi
+                echo "Note: Test results are stored in the 'test_results' directory (ignored by git)"
+                echo "If you need to save specific test results, please click them manually."
             else
                 echo "HTML report not found"
             fi
