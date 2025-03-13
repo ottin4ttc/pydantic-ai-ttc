@@ -20,6 +20,11 @@ dependencies = [
     "devtools>=0.12.2",
     "gradio>=5.9.0; python_version>'3.9'",
     "python-dotenv>=1.0.1",
+    "pytest>=7.0.0",
+    "pytest-playwright>=0.4.0",
+    "playwright>=1.40.0",
+    "dirty-equals>=0.7.1",
+    "vcrpy>=5.1.0",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -85,25 +85,38 @@ check_dependencies() {
 check_python_packages() {
     echo "=== Checking Python packages ==="
     
+    # 检查虚拟环境
+    if [ ! -d ".venv" ]; then
+        echo "Creating virtual environment..."
+        python -m venv .venv
+    fi
+    
+    # 激活虚拟环境
+    source .venv/Scripts/activate
+    
     # 检查 pyproject.toml 是否存在
     if [ ! -f "pyproject.toml" ]; then
         echo "❌ pyproject.toml not found"
+        deactivate
         return 1
     fi
     
     echo "Installing project in development mode..."
-    if ! pip install -e .; then
+    if ! pip install -e ".[uitest]"; then
         echo "❌ Failed to install project dependencies"
+        deactivate
         return 1
     fi
     
     echo "Installing playwright browsers..."
     if ! playwright install; then
         echo "❌ Failed to install playwright browsers"
+        deactivate
         return 1
     fi
     
     echo "✓ All Python dependencies installed successfully"
+    deactivate
     return 0
 }
 
@@ -240,8 +253,15 @@ main() {
     
     echo "=== Running UI tests ==="
     # 运行测试
-    python -m pytest ttc_agent/tests/ui/test_conversation.py -v
-    TEST_RESULT=$?
+    if [ -d ".venv" ]; then
+        source .venv/Scripts/activate
+        python -m pytest ttc_agent/tests/ui/test_conversation.py -v
+        TEST_RESULT=$?
+        deactivate
+    else
+        echo "❌ Virtual environment not found. Please create one with 'python -m venv .venv'"
+        TEST_RESULT=1
+    fi
     
     if [ $TEST_RESULT -eq 0 ]; then
         echo "✓ Tests completed successfully"
