@@ -52,14 +52,22 @@ class TechnicalSupportAgent(BaseAgent):
 class AgentFactory:
     """Agent工厂类"""
     def __init__(self, openai_model: OpenAIModel, dmx_model: OpenAIModel):
-        self.agents: Dict[str, BaseAgent] = {
+        self.openai_model = openai_model
+        self.dmx_model = dmx_model
+        self.predefined_agents = {
             'customer_service': CustomerServiceAgent(openai_model),
             'technical_support': TechnicalSupportAgent(dmx_model)
         }
 
-    def get_agent(self, role_type: str) -> BaseAgent:
-        """获取指定角色的Agent"""
-        agent = self.agents.get(role_type)
+    def get_agent(self, role_type: str, system_prompt: str | None = None) -> BaseAgent:
+        """获取指定角色的Agent或创建自定义Agent"""
+        if system_prompt is not None:
+            # Create a custom agent with the provided system prompt
+            return BaseAgent(self.openai_model, system_prompt)
+        
+        # Use predefined agent if available
+        agent = self.predefined_agents.get(role_type)
         if agent is None:
-            raise ValueError(f"Unknown role type: {role_type}")
-        return agent 
+            # For unknown role types, create a default agent
+            return BaseAgent(self.openai_model, "You are a helpful AI assistant.")
+        return agent  
