@@ -4,6 +4,7 @@ import os
 from typing import Dict, Any, List
 from playwright.sync_api import Page, Browser, BrowserContext, sync_playwright
 from ttc_agent.tests.ui.test_utils import create_test_run_dir, setup_logger, UITestResult, ReportGenerator
+from ttc_agent.tests.ui.port_utils import get_frontend_port, get_ports_to_try
 
 # 全局变量，在所有测试之间共享
 RUN_DIR = create_test_run_dir()
@@ -45,6 +46,26 @@ def conversation_page(page: Page):
     from ttc_agent.tests.ui.test_conversation import ConversationPage
     LOGGER.info("Creating ConversationPage")
     conversation_page = ConversationPage(page)
+    
+    # 记录当前使用的前端端口
+    frontend_port = get_frontend_port()
+    if frontend_port:
+        LOGGER.info(f"Using frontend port from environment: {frontend_port}")
+    else:
+        LOGGER.info(f"No frontend port specified in environment, will try default ports")
+    
+    # 导航到主页
+    try:
+        LOGGER.info("Navigating to home page")
+        conversation_page.navigate_to_home()
+    except Exception as e:
+        LOGGER.error(f"Failed to navigate to home page: {str(e)}")
+        # 捕获当前页面截图以便调试
+        screenshot_path = f"{RUN_DIR}/screenshots/navigation-error.png"
+        LOGGER.debug(f"Taking error screenshot: {screenshot_path}")
+        page.screenshot(path=screenshot_path)
+        raise
+    
     yield conversation_page
 
 # 在所有测试完成后生成报告
