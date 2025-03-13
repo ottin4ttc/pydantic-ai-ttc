@@ -248,7 +248,7 @@ main() {
     
     echo "=== Running UI tests ==="
     # 运行测试
-    python -m pytest ttc_agent/tests/ui/test_send_message.py ttc_agent/tests/ui/test_create_conversation.py ttc_agent/tests/ui/test_conversation_switching.py -v
+    python -m pytest ttc_agent/tests/ui/ -v
     TEST_RESULT=$?
     
     # 查找最新的测试报告
