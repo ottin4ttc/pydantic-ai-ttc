@@ -2,12 +2,8 @@ import pytest
 import time
 import traceback
 from playwright.sync_api import Page
-from ttc_agent.tests.ui.test_utils import create_test_run_dir, setup_logger, UITestResult, ReportGenerator
-
-# 全局变量
-RUN_DIR = create_test_run_dir()
-LOGGER = setup_logger(RUN_DIR)
-REPORT_GENERATOR = ReportGenerator(RUN_DIR)
+from ttc_agent.tests.ui.test_utils import UITestResult
+from ttc_agent.tests.ui.conftest import RUN_DIR, LOGGER, REPORT_GENERATOR
 
 class ConversationPage:
     """Page object for conversation interactions"""
@@ -232,4 +228,4 @@ class ConversationPage:
             error_msg = f"Error getting last message: {str(e)}"
             LOGGER.error(error_msg)
             LOGGER.error(traceback.format_exc())
-            return ""
+            return ""   
