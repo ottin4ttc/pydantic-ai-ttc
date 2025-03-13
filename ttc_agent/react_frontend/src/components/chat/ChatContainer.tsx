@@ -189,7 +189,7 @@ const ChatContainer = () => {
   };
   
   return (
-    <div className="flex h-[80vh] max-w-6xl mx-auto">
+    <div className="flex h-[80vh] max-w-6xl mx-auto" data-testid="chat-container">
       <ConversationList
         conversations={conversations}
         currentConversationId={currentConversationId}
@@ -197,8 +197,8 @@ const ChatContainer = () => {
         onNewConversation={handleNewConversation}
       />
       
-      <Card className="flex flex-col h-full border shadow-md flex-1">
-        <div className="p-4 bg-primary/5">
+      <Card className="flex flex-col h-full border shadow-md flex-1" data-testid="chat-main">
+        <div className="p-4 bg-primary/5" data-testid="chat-header">
           <h1 className="text-2xl font-bold text-center">TTC Agent Chat</h1>
           <p className="text-center text-muted-foreground">Ask me anything about TTC services</p>
         </div>
@@ -206,15 +206,15 @@ const ChatContainer = () => {
         <Separator />
         
         {error && (
-          <Alert variant="destructive" className="m-2">
+          <Alert variant="destructive" className="m-2" data-testid="error-alert">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
         
-        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef} data-testid="messages-scroll-area">
           {messages.length === 0 && !isLoading ? (
-            <div className="text-center text-muted-foreground py-8">
+            <div className="text-center text-muted-foreground py-8" data-testid="empty-messages">
               No messages yet. Start a conversation!
             </div>
           ) : (
@@ -227,7 +227,7 @@ const ChatContainer = () => {
           )}
           
           {isLoading && !isStreaming && (
-            <div className="flex mb-4">
+            <div className="flex mb-4" data-testid="loading-indicator">
               <div className="bg-muted p-3 rounded-lg max-w-[80%] animate-pulse">
                 <div className="h-4 bg-muted-foreground/20 rounded w-3/4 mb-2"></div>
                 <div className="h-4 bg-muted-foreground/20 rounded w-1/2"></div>
@@ -238,18 +238,20 @@ const ChatContainer = () => {
         
         <Separator />
         
-        <div className="p-4">
-          <form className="flex gap-2" onSubmit={handleSubmit}>
+        <div className="p-4" data-testid="chat-input-area">
+          <form className="flex gap-2" onSubmit={handleSubmit} data-testid="chat-form">
             <Input 
               placeholder="Type your message here..." 
               className="flex-1"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               disabled={isLoading || !currentConversationId}
+              data-testid="message-input"
             />
             <Button 
-              type="submit" 
-              disabled={isLoading || !inputValue.trim() || !currentConversationId}
+              type="submit"
+              disabled={isLoading || !currentConversationId || !inputValue.trim()}
+              data-testid="send-button"
             >
               <Send className="h-4 w-4 mr-2" />
               Send

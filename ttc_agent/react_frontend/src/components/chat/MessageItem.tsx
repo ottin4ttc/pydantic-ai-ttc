@@ -17,32 +17,40 @@ const MessageItem = ({ message }: MessageItemProps) => {
   });
   
   return (
-    <div className={cn(
-      "flex gap-3 mb-4",
-      isUser ? "justify-end" : "justify-start"
-    )}>
+    <div 
+      className={cn(
+        "flex gap-3 mb-4",
+        isUser ? "justify-end" : "justify-start"
+      )}
+      data-testid={`message-${message.id}`}
+      data-message-role={role}
+      data-message-id={message.id}
+    >
       {!isUser && (
-        <Avatar className="h-8 w-8 bg-primary/20">
+        <Avatar className="h-8 w-8 bg-primary/20" data-testid="assistant-avatar">
           <Bot className="h-4 w-4" />
         </Avatar>
       )}
       
-      <div className={cn(
-        "p-3 rounded-lg max-w-[80%]",
-        isUser 
-          ? "bg-primary text-primary-foreground" 
-          : "bg-muted"
-      )}>
-        <div className="prose prose-sm dark:prose-invert">
+      <div 
+        className={cn(
+          "p-3 rounded-lg max-w-[80%]",
+          isUser 
+            ? "bg-primary text-primary-foreground" 
+            : "bg-muted"
+        )}
+        data-testid="message-content"
+      >
+        <div className="prose prose-sm dark:prose-invert" data-testid="message-text">
           <ReactMarkdown>{content}</ReactMarkdown>
         </div>
-        <div className="text-xs opacity-70 mt-1 text-right">
+        <div className="text-xs opacity-70 mt-1 text-right" data-testid="message-timestamp">
           {formattedTime}
         </div>
       </div>
       
       {isUser && (
-        <Avatar className="h-8 w-8 bg-primary">
+        <Avatar className="h-8 w-8 bg-primary" data-testid="user-avatar">
           <User className="h-4 w-4" />
         </Avatar>
       )}
