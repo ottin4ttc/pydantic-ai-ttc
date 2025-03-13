@@ -10,6 +10,7 @@ import { useToast } from '../../hooks/use-toast';
 import MessageItem from './MessageItem';
 import { ConversationList } from './ConversationList';
 import BotSelectionDialog from './BotSelectionDialog';
+import BotManagementDialog from './BotManagementDialog';
 import ChatService from '../../services/ChatService';
 import { ChatMessage, Conversation } from '../../types/chat';
 
@@ -22,6 +23,7 @@ const ChatContainer = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isBotDialogOpen, setIsBotDialogOpen] = useState(false);
+  const [isBotManagementOpen, setIsBotManagementOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const sentMessageRef = useRef<string | null>(null);
   const { toast } = useToast();
@@ -211,9 +213,23 @@ const ChatContainer = () => {
         currentBotType={conversations.find(c => c.id === currentConversationId)?.role_type}
       />
       
+      <BotManagementDialog
+        open={isBotManagementOpen}
+        onOpenChange={setIsBotManagementOpen}
+      />
+      
       <Card className="flex flex-col h-full border shadow-md flex-1" data-testid="chat-main">
         <div className="p-4 bg-primary/5" data-testid="chat-header">
-          <h1 className="text-2xl font-bold text-center">TTC Agent Chat</h1>
+          <div className="flex justify-between items-center mb-2">
+            <h1 className="text-2xl font-bold">TTC Agent Chat</h1>
+            <Button
+              variant="outline"
+              onClick={() => setIsBotManagementOpen(true)}
+              data-testid="manage-bots-button"
+            >
+              Manage Bots
+            </Button>
+          </div>
           <p className="text-center text-muted-foreground">Ask me anything about TTC services</p>
         </div>
         
