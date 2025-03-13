@@ -2,13 +2,9 @@ import pytest
 import time
 import traceback
 from playwright.sync_api import Page
-from ttc_agent.tests.ui.test_utils import create_test_run_dir, setup_logger, UITestResult, ReportGenerator
+from ttc_agent.tests.ui.test_utils import UITestResult
 from ttc_agent.tests.ui.test_conversation import ConversationPage
-
-# 全局变量
-RUN_DIR = create_test_run_dir()
-LOGGER = setup_logger(RUN_DIR)
-REPORT_GENERATOR = ReportGenerator(RUN_DIR)
+from ttc_agent.tests.ui.conftest import RUN_DIR, LOGGER, REPORT_GENERATOR
 
 def test_create_conversation(conversation_page: ConversationPage):
     """
@@ -33,11 +29,25 @@ def test_create_conversation(conversation_page: ConversationPage):
         cs_conv_id = conversation_page.create_new_conversation("customer_service")
         LOGGER.info(f"Customer service conversation ID: {cs_conv_id}")
         
-        # Verify the conversation exists
-        LOGGER.info("Step 2: Verifying customer service conversation exists")
-        test_result.add_step("Verifying customer service conversation exists")
+        # Create second conversation with technical support bot
+        LOGGER.info("Step 2: Creating technical support bot conversation")
+        test_result.add_step("Creating technical support bot conversation")
+        ts_conv_id = conversation_page.create_new_conversation("technical_support")
+        LOGGER.info(f"Technical support conversation ID: {ts_conv_id}")
+        
+        # Verify both conversations exist
+        LOGGER.info("Step 3: Verifying both conversations exist")
+        test_result.add_step("Verifying both conversations exist")
+        
+        # Check customer service conversation
+        conversation_page.switch_to_conversation(cs_conv_id)
         current_id = conversation_page.get_current_conversation_id()
         assert current_id == cs_conv_id, f"Expected current conversation to be {cs_conv_id}, got {current_id}"
+        
+        # Check technical support conversation
+        conversation_page.switch_to_conversation(ts_conv_id)
+        current_id = conversation_page.get_current_conversation_id()
+        assert current_id == ts_conv_id, f"Expected current conversation to be {ts_conv_id}, got {current_id}"
         
         # 截图以便调试
         test_result.add_screenshot("final-state", conversation_page.page)
@@ -56,10 +66,3 @@ def test_create_conversation(conversation_page: ConversationPage):
     finally:
         # 添加测试结果到报告生成器
         REPORT_GENERATOR.add_result(test_result)
-        
-        # 生成报告
-        json_report = REPORT_GENERATOR.generate_json_report()
-        html_report = REPORT_GENERATOR.generate_html_report()
-        
-        LOGGER.info(f"Test report generated: {json_report}")
-        LOGGER.info(f"HTML report generated: {html_report}")
