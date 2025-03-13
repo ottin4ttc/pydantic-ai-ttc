@@ -76,8 +76,19 @@ async def lifespan(_app: fastapi.FastAPI):
         yield {'db': db}
 
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = fastapi.FastAPI(lifespan=lifespan)
 logfire.instrument_fastapi(app)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Import and include routers
 from .direct_api import router as direct_router
@@ -417,4 +428,4 @@ if __name__ == '__main__':
 
     uvicorn.run(
         'ttc_agent.chat_app:app', reload=True, reload_dirs=[str(THIS_DIR)]
-    )                                                                                                                                                                                                                                                                                                                                                                                                                                                
+    )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
