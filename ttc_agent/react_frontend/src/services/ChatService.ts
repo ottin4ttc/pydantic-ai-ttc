@@ -14,7 +14,7 @@ class ChatService {
     try {
       // Use only the simplified endpoint that doesn't require a request body
       console.log('Creating new conversation using direct endpoint');
-      const response = await fetch(`${this.baseUrl}/new_conversation`, {
+      const response = await fetch(`${this.baseUrl}/api/new_conversation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -34,7 +34,7 @@ class ChatService {
 
   async getConversations(): Promise<Conversation[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/conversations`);
+      const response = await fetch(`${this.baseUrl}/api/conversations`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch conversations: ${response.status}`);
@@ -49,7 +49,7 @@ class ChatService {
 
   async getConversation(id: string): Promise<Conversation | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/conversations/${id}`);
+      const response = await fetch(`${this.baseUrl}/api/conversations/${id}`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch conversation: ${response.status}`);
@@ -64,7 +64,7 @@ class ChatService {
 
   async getChatHistory(conversationId: string): Promise<ChatMessage[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/chat/${conversationId}/history`);
+      const response = await fetch(`${this.baseUrl}/api/chat/${conversationId}/history`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch chat history: ${response.status}`);
@@ -79,7 +79,7 @@ class ChatService {
 
   async sendMessage(content: string, conversationId: string, roleType: string = 'default'): Promise<Response> {
     try {
-      const response = await fetch(`${this.baseUrl}/chat/${conversationId}`, {
+      const response = await fetch(`${this.baseUrl}/api/chat/${conversationId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

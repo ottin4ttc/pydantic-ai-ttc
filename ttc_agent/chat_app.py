@@ -104,7 +104,7 @@ async def get_db(request: Request) -> Database:
     return request.state.db
 
 
-@app.get('/chat/')
+@app.get('/api/chat/')
 async def get_chat(database: Database = Depends(get_db)) -> Response:
     msgs = await database.get_messages()
     return Response(
@@ -141,7 +141,7 @@ def to_chat_message(m: ModelMessage) -> ChatMessage:
     raise UnexpectedModelBehavior(f'Unexpected message type for chat app: {m}')
 
 
-@app.post('/chat/')
+@app.post('/api/chat/')
 async def post_chat(
     prompt: Annotated[str, fastapi.Form()], database: Database = Depends(get_db)
 ) -> StreamingResponse:
@@ -174,7 +174,7 @@ async def post_chat(
     return StreamingResponse(stream_messages(), media_type='text/plain')
 
 
-@app.post('/chat/{conversation_id}')
+@app.post('/api/chat/{conversation_id}')
 async def post_chat_with_id(
     conversation_id: str,
     request: Request,
@@ -215,7 +215,7 @@ async def post_chat_with_id(
     return StreamingResponse(stream_messages(), media_type='text/plain')
 
 
-@app.get('/chat/{conversation_id}/history')
+@app.get('/api/chat/{conversation_id}/history')
 async def get_chat_history_by_id(
     conversation_id: str,
     database: Database = Depends(get_db)
@@ -232,7 +232,7 @@ class ConversationDict(TypedDict):
     created_at: str
     updated_at: str
 
-@app.get('/conversations')
+@app.get('/api/conversations')
 async def get_conversations() -> list[ConversationDict]:
     # 由于我们目前没有真正的会话存储，所以返回一个模拟的会话列表
     # 在实际应用中，这应该从数据库中获取
@@ -245,7 +245,7 @@ async def get_conversations() -> list[ConversationDict]:
         }
     ]
 
-@app.get('/conversations/{conversation_id}')
+@app.get('/api/conversations/{conversation_id}')
 async def get_conversation(conversation_id: str) -> ConversationDict:
     # 由于我们目前没有真正的会话存储，所以返回一个模拟的会话
     # 在实际应用中，这应该从数据库中获取
@@ -386,4 +386,4 @@ if __name__ == '__main__':
 
     uvicorn.run(
         'ttc_agent.chat_app:app', reload=True, reload_dirs=[str(THIS_DIR)]
-    )            
+    )                                                

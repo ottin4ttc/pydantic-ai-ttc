@@ -11,7 +11,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/chat': {
+      '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
         configure: (proxy) => {
@@ -23,34 +23,6 @@ export default defineConfig({
           });
           proxy.on('proxyRes', (proxyRes, req) => {
             console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
-          });
-        },
-      },
-      '/conversations': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        configure: (proxy) => {
-          proxy.on('error', (err) => {
-            console.log('Proxy error:', err);
-          });
-        },
-      },
-      '/new_conversation': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        configure: (proxy) => {
-          proxy.on('error', (err) => {
-            console.log('Proxy error:', err);
-          });
-        },
-      },
-      // Catch-all for any other API routes
-      '^/api/.*': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        configure: (proxy) => {
-          proxy.on('error', (err) => {
-            console.log('Proxy error:', err);
           });
         },
       }
