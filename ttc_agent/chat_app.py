@@ -348,7 +348,7 @@ class Database:
         try:
             yield slf
         finally:
-            await slf._asyncify(con.close)
+            await slf.asyncify(con.close)
 
     @staticmethod
     def _connect(file: Path) -> sqlite3.Connection:
@@ -467,4 +467,4 @@ if __name__ == '__main__':
 
     uvicorn.run(
         'ttc_agent.chat_app:app', reload=True, reload_dirs=[str(THIS_DIR)]
-    )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+    )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
